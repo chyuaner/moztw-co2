@@ -38,15 +38,20 @@ async function main(): Promise<void> {
 
   console.log(`${colors.cyan}=== MozTW Space Info CLI ===${colors.reset}\n`);
 
-  if (args.includes('--recent')) {
-    console.log(`${colors.yellow}正在執行近期上傳模式...${colors.reset}`);
-    // TODO: 實作爬蟲或相關邏輯
-  }
+//   if (args.includes('--recent')) {
+//     console.log(`${colors.yellow}正在執行近期上傳模式...${colors.reset}`);
+//     // TODO: 實作爬蟲或相關邏輯
+//   }
 
   // 範例：呼叫你剛才設計的 SwitchBot 物件
   try {
     console.log(`${colors.green}正在從 SwitchBot API 抓取資料...${colors.reset}`);
-    const bot = new SwitchBot();
+    
+    const bot = new SwitchBot(
+      process.env.SWITCHBOT_DEVICE_ID || 'YOUR_DEVICE_ID',
+      process.env.SWITCHBOT_TOKEN || '',
+      process.env.SWITCHBOT_SECRET || ''
+    );
     const data = await bot.getAll();
 
     console.log(`${colors.green}目前空間資訊：${colors.reset}`);

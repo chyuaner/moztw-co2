@@ -16,9 +16,9 @@ export class SwitchBot {
   private fetchPromise: Promise<SwitchBotData> | null = null;
 
   constructor(
-    deviceId: string = process.env.SWITCHBOT_DEVICE_ID || 'YOUR_DEVICE_ID',
-    token: string = process.env.SWITCHBOT_TOKEN || '',
-    secret: string = process.env.SWITCHBOT_SECRET || ''
+    deviceId: string,
+    token: string,
+    secret: string
   ) {
     this.deviceId = deviceId;
     this.token = token;
