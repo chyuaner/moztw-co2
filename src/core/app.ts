@@ -23,13 +23,27 @@ app.get('/api/info', (c) => {
 // Telegram Bot Webhook 接收端點
 app.post('/bot', async (c) => {
   // hono/adapter 的 env 會自動處理 Node.js (process.env) 與 Cloudflare Workers (c.env) 的環境變數差異
-  const { TELEGRAM_BOT_TOKEN } = env<{ TELEGRAM_BOT_TOKEN: string }>(c);
+  const { 
+    TELEGRAM_BOT_TOKEN, 
+    SWITCHBOT_DEVICE_ID, 
+    SWITCHBOT_TOKEN, 
+    SWITCHBOT_SECRET 
+  } = env<{ 
+    TELEGRAM_BOT_TOKEN: string,
+    SWITCHBOT_DEVICE_ID: string,
+    SWITCHBOT_TOKEN: string,
+    SWITCHBOT_SECRET: string
+  }>(c);
   
   if (!TELEGRAM_BOT_TOKEN) {
     return c.json({ error: 'Bot token not configured' }, 500);
   }
 
-  const bot = createBot(TELEGRAM_BOT_TOKEN);
+  const bot = createBot(TELEGRAM_BOT_TOKEN, {
+    deviceId: SWITCHBOT_DEVICE_ID || '',
+    token: SWITCHBOT_TOKEN || '',
+    secret: SWITCHBOT_SECRET || '',
+  });
   
   // 使用 grammY 內建的 webhookCallback，並指定 adapter 為 'hono'
   const handleUpdate = webhookCallback(bot, 'hono');

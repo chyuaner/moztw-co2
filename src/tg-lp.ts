@@ -8,7 +8,11 @@ if (!token) {
   process.exit(1);
 }
 
-const bot = createBot(token);
+const bot = createBot(token, {
+  deviceId: process.env.SWITCHBOT_DEVICE_ID || '',
+  token: process.env.SWITCHBOT_TOKEN || '',
+  secret: process.env.SWITCHBOT_SECRET || '',
+});
 
 console.log('🚀 正在啟動 Telegram Bot (Long Polling 模式)...');
 
