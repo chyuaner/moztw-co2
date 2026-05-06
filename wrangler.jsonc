@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "space-info-api",
+  "name": "moztw-space-info-api",
   "main": "src/worker.ts",
   "compatibility_date": "2026-05-06"
   // "compatibility_flags": [
