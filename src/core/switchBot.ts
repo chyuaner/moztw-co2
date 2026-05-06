@@ -1,3 +1,12 @@
+export interface SensorConfig {
+  id: string;
+  name: string;
+  vendor?: string;
+  deviceId?: string;
+  token?: string;
+  secret?: string;
+}
+
 export interface SwitchBotData {
   temperature: number;
   humidity: number;
@@ -5,6 +14,8 @@ export interface SwitchBotData {
 }
 
 export class SwitchBot {
+  public id: string;
+  public name: string;
   private deviceId: string;
   private token: string;
   private secret: string;
@@ -15,14 +26,12 @@ export class SwitchBot {
   // 避免同時間併發觸發多次 fetch
   private fetchPromise: Promise<SwitchBotData> | null = null;
 
-  constructor(
-    deviceId: string,
-    token: string,
-    secret: string
-  ) {
-    this.deviceId = deviceId;
-    this.token = token;
-    this.secret = secret;
+  constructor(config: SensorConfig) {
+    this.id = config.id;
+    this.name = config.name;
+    this.deviceId = config.deviceId || '';
+    this.token = config.token || '';
+    this.secret = config.secret || '';
   }
 
   private get apiUrl() {

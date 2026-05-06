@@ -1,4 +1,5 @@
 import { createBot } from './core/bot.js';
+import { SensorConfig } from './core/switchBot.js';
 import 'dotenv/config';
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -8,11 +9,14 @@ if (!token) {
   process.exit(1);
 }
 
-const bot = createBot(token, {
-  deviceId: process.env.SWITCHBOT_DEVICE_ID || '',
-  token: process.env.SWITCHBOT_TOKEN || '',
-  secret: process.env.SWITCHBOT_SECRET || '',
-});
+let sensorsConfig: SensorConfig[] = [];
+try {
+  sensorsConfig = JSON.parse(process.env.SENSORS_CONFIG || '[]');
+} catch (e) {
+  console.error('[Config Error] Failed to parse SENSORS_CONFIG:', e);
+}
+
+const bot = createBot(token, sensorsConfig);
 
 console.log('🚀 正在啟動 Telegram Bot (Long Polling 模式)...');
 
