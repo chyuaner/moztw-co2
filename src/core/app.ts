@@ -29,17 +29,61 @@ const getSensors = (c: any) => {
   }
 };
 
-// 基本的 HTTP API 路由
+// 取得所有感測器資料的輔助函式
+const getSpaceApiSensors = async (c: any) => {
+  const sensors = getSensors(c);
+  const dataList = await Promise.all(
+    sensors.map(async (s) => {
+      const d = await s.getAll();
+      return { sensor: s, data: d };
+    })
+  );
+
+  // 依照 SpaceAPI Schema 轉換 Sensor 格式
+  const now = Math.floor(Date.now() / 1000);
+
+  const temperature = dataList
+    .filter(item => typeof item.data.temperature === 'number')
+    .map(item => ({
+      value: item.data.temperature,
+      unit: '°C',
+      location: item.sensor.name,
+      name: item.sensor.id,
+      lastchange: now
+    }));
+
+  const humidity = dataList
+    .filter(item => typeof item.data.humidity === 'number')
+    .map(item => ({
+      value: item.data.humidity,
+      unit: '%',
+      location: item.sensor.name,
+      name: item.sensor.id,
+      lastchange: now
+    }));
+
+  const carbondioxide = dataList
+    .filter(item => typeof item.data.co2 === 'number')
+    .map(item => ({
+      value: item.data.co2,
+      unit: 'ppm',
+      location: item.sensor.name,
+      name: item.sensor.id,
+      lastchange: now
+    }));
+
+  // 只回傳 sensors 區段的內容
+  return {
+    temperature,
+    humidity,
+    carbondioxide
+  };
+};
+
+// 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
 app.get('/', async (c) => {
   try {
-    const sensors = getSensors(c);
-    const data = await Promise.all(
-      sensors.map(async (s) => {
-        const d = await s.getAll();
-        return { id: s.id, name: s.name, ...d };
-      })
-    );
-  
+    const data = await getSpaceApiSensors(c);
     return c.json(data);
   } catch (error) {
     console.error(`[Error] GET /:`, error);
@@ -47,45 +91,13 @@ app.get('/', async (c) => {
   }
 });
 
-app.get('/temperature', async (c) => {
+app.get('/sensors', async (c) => {
   try {
-    const sensors = getSensors(c);
-    const data = await Promise.all(
-      sensors.map(async (s) => ({ id: s.id, name: s.name, temperature: await s.getTemperature() }))
-    );
-  
+    const data = await getSpaceApiSensors(c);
     return c.json(data);
   } catch (error) {
-    console.error(`[Error] GET /temperature:`, error);
-    return c.text('無法抓取溫度資訊，請稍後再試。', 500);
-  }
-});
-
-app.get('/humidity', async (c) => {
-  try {
-    const sensors = getSensors(c);
-    const data = await Promise.all(
-      sensors.map(async (s) => ({ id: s.id, name: s.name, humidity: await s.getHumidity() }))
-    );
-  
-    return c.json(data);
-  } catch (error) {
-    console.error(`[Error] GET /humidity:`, error);
-    return c.text('無法抓取濕度資訊，請稍後再試。', 500);
-  }
-});
-
-app.get('/co2', async (c) => {
-  try {
-    const sensors = getSensors(c);
-    const data = await Promise.all(
-      sensors.map(async (s) => ({ id: s.id, name: s.name, co2: await s.getCo2() }))
-    );
-  
-    return c.json(data);
-  } catch (error) {
-    console.error(`[Error] GET /co2:`, error);
-    return c.text('無法抓取 CO2 資訊，請稍後再試。', 500);
+    console.error(`[Error] GET /sensors:`, error);
+    return c.text('無法抓取空間資訊，請稍後再試。', 500);
   }
 });
 
