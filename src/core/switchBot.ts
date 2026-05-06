@@ -5,7 +5,7 @@ export interface SwitchBotData {
 }
 
 export class SwitchBot {
-  private readonly apiUrl = 'https://api.switch-bot.com/v1.1/devices/YOUR_DEVICE_ID/status';
+  private deviceId: string;
   private token: string;
   private secret: string;
 
@@ -15,9 +15,18 @@ export class SwitchBot {
   // 避免同時間併發觸發多次 fetch
   private fetchPromise: Promise<SwitchBotData> | null = null;
 
-  constructor(token: string = '', secret: string = '') {
+  constructor(
+    deviceId: string = process.env.SWITCHBOT_DEVICE_ID || 'YOUR_DEVICE_ID',
+    token: string = process.env.SWITCHBOT_TOKEN || '',
+    secret: string = process.env.SWITCHBOT_SECRET || ''
+  ) {
+    this.deviceId = deviceId;
     this.token = token;
     this.secret = secret;
+  }
+
+  private get apiUrl() {
+    return `https://api.switch-bot.com/v1.1/devices/${this.deviceId}/status`;
   }
 
   /**
