@@ -47,8 +47,8 @@ const getSpaceApiSensors = async (c: any) => {
     .map(item => ({
       value: item.data.temperature,
       unit: '°C',
-      location: item.sensor.name,
-      name: item.sensor.id,
+      location: item.sensor.id,
+      // name: item.sensor.name,
       lastchange: now
     }));
 
@@ -57,8 +57,8 @@ const getSpaceApiSensors = async (c: any) => {
     .map(item => ({
       value: item.data.humidity,
       unit: '%',
-      location: item.sensor.name,
-      name: item.sensor.id,
+      location: item.sensor.id,
+      // name: item.sensor.name,
       lastchange: now
     }));
 
@@ -67,8 +67,8 @@ const getSpaceApiSensors = async (c: any) => {
     .map(item => ({
       value: item.data.co2,
       unit: 'ppm',
-      location: item.sensor.name,
-      name: item.sensor.id,
+      location: item.sensor.id,
+      // name: item.sensor.name,
       lastchange: now
     }));
 
