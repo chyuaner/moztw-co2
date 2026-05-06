@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     console.log(`${colors.green}正在從 SwitchBot API 抓取資料...${colors.reset}`);
     
     const bot = new SwitchBot(
-      process.env.SWITCHBOT_DEVICE_ID || 'YOUR_DEVICE_ID',
+      process.env.SWITCHBOT_DEVICE_ID || '',
       process.env.SWITCHBOT_TOKEN || '',
       process.env.SWITCHBOT_SECRET || ''
     );
