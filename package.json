@@ -1,0 +1,17 @@
+{
+  "name": "space-info-api",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "hono": "^4.12.17",
+    "node-addon-api": "^8.7.0",
+    "node-gyp": "^12.3.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.4.0"
+  }
+}
