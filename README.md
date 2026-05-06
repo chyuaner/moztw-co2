@@ -48,7 +48,7 @@ cp .env.sample .env
 - **Telegram Bot (Long Polling)**: `npm run dev:tg`
 
 
-## 📦 部署
+## 部署
 
 ### 部署到 Cloudflare Workers
 ```bash
@@ -57,6 +57,21 @@ npm run deploy
 
 > **注意**：部署到 Cloudflare 時請使用 Webhook 模式（`/bot` 端點），本地測試可使用 Long Polling (`npm run dev:tg`)。
 
+## 設定Telegram Bot的模式（Webhook / Long Polling）
+### 查狀態
+```
+https://api.telegram.org/bot<TG_TOKEN>/getWebhookInfo
+```
+
+### 綁定Webhook
+```
+https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>
+```
+
+### 解除綁定Webhook （回歸Long Polling模式）
+```
+https://api.telegram.org/bot<TG_TOKEN>/deleteWebhook
+```
 
 ## 📄 授權
 [MPL-2.0](LICENSE)
