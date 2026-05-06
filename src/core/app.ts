@@ -15,7 +15,18 @@ type Bindings = {
 
 // 取得 SwitchBot 實例的輔助函式
 const getSwitchBot = (c: any) => {
-  const { SWITCHBOT_DEVICE_ID, SWITCHBOT_TOKEN, SWITCHBOT_SECRET } = env<Bindings>(c);
+  const bindings = env<Bindings>(c);
+  const { SWITCHBOT_DEVICE_ID, SWITCHBOT_TOKEN, SWITCHBOT_SECRET } = bindings;
+
+  // 如果缺少必要的環境變數，輸出警告到紀錄中
+  if (!SWITCHBOT_DEVICE_ID || !SWITCHBOT_TOKEN || !SWITCHBOT_SECRET) {
+    console.warn('[SwitchBot] Missing environment variables:', {
+      hasDeviceId: !!SWITCHBOT_DEVICE_ID,
+      hasToken: !!SWITCHBOT_TOKEN,
+      hasSecret: !!SWITCHBOT_SECRET,
+    });
+  }
+
   return new SwitchBot(SWITCHBOT_DEVICE_ID || '', SWITCHBOT_TOKEN || '', SWITCHBOT_SECRET || '');
 };
 
@@ -27,6 +38,7 @@ app.get('/', async (c) => {
   
     return c.json(data);
   } catch (error) {
+    console.error(`[Error] GET /:`, error);
     return c.text('無法抓取空間資訊，請稍後再試。', 500);
   }
 });
@@ -38,6 +50,7 @@ app.get('/temperature', async (c) => {
   
     return c.text(data.toString());
   } catch (error) {
+    console.error(`[Error] GET /temperature:`, error);
     return c.text('無法抓取溫度資訊，請稍後再試。', 500);
   }
 });
@@ -49,6 +62,7 @@ app.get('/humidity', async (c) => {
   
     return c.text(data.toString());
   } catch (error) {
+    console.error(`[Error] GET /humidity:`, error);
     return c.text('無法抓取濕度資訊，請稍後再試。', 500);
   }
 });
@@ -60,6 +74,7 @@ app.get('/co2', async (c) => {
   
     return c.text(data.toString());
   } catch (error) {
+    console.error(`[Error] GET /co2:`, error);
     return c.text('無法抓取 CO2 資訊，請稍後再試。', 500);
   }
 });
@@ -90,3 +105,9 @@ app.post('/bot', async (c) => {
 });
 
 app.notFound((c) => c.text('Not Found', 404));
+
+// 全域錯誤處理
+app.onError((err, c) => {
+  console.error(`[Global Error] ${c.req.method} ${c.req.url}:`, err);
+  return c.text('伺服器發生錯誤，請稍後再試。', 500);
+});

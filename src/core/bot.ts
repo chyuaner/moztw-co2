@@ -28,6 +28,7 @@ export const createBot = (token: string, config: SwitchBotConfig) => {
       
       await ctx.reply(message, { parse_mode: 'Markdown' });
     } catch (error) {
+      console.error('[Bot Error] /space:', error);
       await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
     }
   });
@@ -39,6 +40,7 @@ export const createBot = (token: string, config: SwitchBotConfig) => {
       const temp = await sb.getTemperature();
       await ctx.reply(`🌡 目前溫度：${temp} °C`);
     } catch (error) {
+      console.error('[Bot Error] /space_temperature:', error);
       await ctx.reply('❌ 無法抓取溫度資訊。');
     }
   });
@@ -50,6 +52,7 @@ export const createBot = (token: string, config: SwitchBotConfig) => {
       const humidity = await sb.getHumidity();
       await ctx.reply(`💧 目前濕度：${humidity} %`);
     } catch (error) {
+      console.error('[Bot Error] /space_humidity:', error);
       await ctx.reply('❌ 無法抓取濕度資訊。');
     }
   });
@@ -61,6 +64,7 @@ export const createBot = (token: string, config: SwitchBotConfig) => {
       const co2 = await sb.getCo2();
       await ctx.reply(`☁️ 目前 CO2 濃度：${co2} ppm`);
     } catch (error) {
+      console.error('[Bot Error] /space_co2:', error);
       await ctx.reply('❌ 無法抓取 CO2 資訊。');
     }
   });
