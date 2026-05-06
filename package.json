@@ -5,6 +5,7 @@
     "dev": "npm run dev:worker",
     "dev:worker": "wrangler dev",
     "dev:node": "tsx src/node.ts",
+    "dev:tg": "tsx src/tg-lp.ts",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
