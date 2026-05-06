@@ -76,5 +76,9 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[]) => {
   //   }
   // });
 
+  bot.on('message', (ctx) => {
+    ctx.reply('請使用 /co2 指令');
+  });
+
   return bot;
 };
