@@ -16,14 +16,21 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[]) => {
       for (const s of sensors) {
         const data = await s.getAll();
         messages.push(`\n📍 *${s.name}*`);
-        messages.push(`🌡 溫度：${data.temperature} °C`);
-        messages.push(`💧 濕度：${data.humidity} %`);
-        messages.push(`☁️ CO2：${data.co2} ppm`);
+        
+        if (typeof data.temperature === 'number') {
+          messages.push(`🌡 溫度：${data.temperature} °C`);
+        }
+        if (typeof data.humidity === 'number') {
+          messages.push(`💧 濕度：${data.humidity} %`);
+        }
+        if (typeof data.co2 === 'number') {
+          messages.push(`☁️ CO2：${data.co2} ppm`);
+        }
       }
       
       await ctx.reply(messages.join('\n'), { parse_mode: 'Markdown' });
     } catch (error) {
-      console.error('[Bot Error] /space:', error);
+      console.error('[Bot Error] /co2:', error);
       await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
     }
   });
@@ -76,8 +83,12 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[]) => {
   //   }
   // });
 
-  bot.on('message', (ctx) => {
-    ctx.reply('請使用 /co2 指令');
+  // 過濾掉所有未被上方指令處理過的文字訊息
+  bot.on('message:text', async (ctx) => {
+    // 只有在訊息不是指令時才提示
+    if (!ctx.message.text.startsWith('/')) {
+      await ctx.reply('請使用 /co2 指令');
+    }
   });
 
   return bot;
