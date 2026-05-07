@@ -8,16 +8,10 @@ MozTW Space Info API
 ### 1. HTTP API
 提供簡單的 HTTP 端點供外部整合：
 - `GET /`: 回傳所有資訊 (JSON)。
-- `GET /temperature`: 僅回傳溫度數值 (Text)。
-- `GET /humidity`: 僅回傳濕度數值 (Text)。
-- `GET /co2`: 僅回傳 CO2 濃度數值 (Text)。
 
 ### 2. Telegram 機器人
 機器人支援以下指令：
 - `/space`: 顯示完整的空間資訊（溫度、濕度、CO2）。
-- `/space_temperature`: 僅顯示目前溫度。
-- `/space_humidity`: 僅顯示目前濕度。
-- `/space_co2`: 僅顯示目前 CO2 濃度。
 
 ### 3. CLI 工具
 如果你只想在終端機快速查看資訊，可以使用：
@@ -38,9 +32,7 @@ npm install
 cp .env.sample .env
 ```
 - `TELEGRAM_BOT_TOKEN`: 你的 Telegram Bot Token。
-- `SWITCHBOT_DEVICE_ID`: SwitchBot Meter/Hub 的設備 ID。
-- `SWITCHBOT_TOKEN`: SwitchBot API Token。
-- `SWITCHBOT_SECRET`: SwitchBot API Secret。
+- `SENSORS_CONFIG`: 所有IoT設備的相關資訊，結構範例請看 `.env.sample` 檔案 （目前支援SwitchBot Meter/Hub 的設備）
 
 ### 3. 啟動本地伺服器
 - **Cloudflare Workers 模式**: `npm run dev`
@@ -57,18 +49,26 @@ npm run deploy
 
 > **注意**：部署到 Cloudflare 時請使用 Webhook 模式（`/bot` 端點），本地測試可使用 Long Polling (`npm run dev:tg`)。
 
-## 設定Telegram Bot的模式（Webhook / Long Polling）
-### 查狀態
+### 設定重要參數
+
+`npx wrangler secret put TELEGRAM_BOT_TOKEN`
+
+`npx wrangler secret put SENSORS_CONFIG`
+
+(⚠️ 小提醒：在終端機貼上給 Cloudflare 的值時，不需要頭尾的單引號，直接貼上 [{...}] 即可)
+
+### 設定Telegram Bot的模式（Webhook / Long Polling）
+#### 查狀態
 ```
 https://api.telegram.org/bot<TG_TOKEN>/getWebhookInfo
 ```
 
-### 綁定Webhook
+#### 綁定Webhook
 ```
 https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>
 ```
 
-### 解除綁定Webhook （回歸Long Polling模式）
+#### 解除綁定Webhook （回歸Long Polling模式）
 ```
 https://api.telegram.org/bot<TG_TOKEN>/deleteWebhook
 ```
