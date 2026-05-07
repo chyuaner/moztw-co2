@@ -42,20 +42,44 @@ cp .env.sample .env
 
 ## 部署
 
-### 部署到 Cloudflare Workers
+### 1. 設定 Cloudflare KV (儲存感測器最後狀態)
+
+本專案使用 Cloudflare KV 來暫存感測器資料與最後更新時間 (`lastchange`)。部署前請先建立對應的 KV Namespace：
+
 ```bash
-npm run deploy
+npx wrangler kv:namespace create "SENSOR_KV"
 ```
 
-> **注意**：部署到 Cloudflare 時請使用 Webhook 模式（`/bot` 端點），本地測試可使用 Long Polling (`npm run dev:tg`)。
+執行後，終端機會回傳一段包含 `id` 的 JSON 設定。請開啟 `wrangler.jsonc`，將其中的 `id` 欄位替換為您剛剛獲得的真實 ID：
 
-### 設定重要參數
+```jsonc
+  "kv_namespaces": [
+    {
+      "binding": "SENSOR_KV",
+      "id": "把剛剛指令回傳的 id 貼到這裡",
+      "preview_id": "如果有需要本地 dev 測試，可以依終端機提示建立並填入"
+    }
+  ]
+```
+*(注意：程式碼固定使用 `"SENSOR_KV"` 作為 `binding` 名稱，請勿更改此欄位。*
+
+### 2. 設定重要環境變數 (Secrets)
+
+請將機器人 Token 與感測器設定存入 Cloudflare Workers 內部：
 
 `npx wrangler secret put TELEGRAM_BOT_TOKEN`
 
 `npx wrangler secret put SENSORS_CONFIG`
 
-(⚠️ 小提醒：在終端機貼上給 Cloudflare 的值時，不需要頭尾的單引號，直接貼上 [{...}] 即可)
+*(⚠️ 小提醒：在終端機貼上給 Cloudflare 的值時，不需要頭尾的單引號，直接貼上 `[{...}]` 即可)*
+
+### 3. 部署到 Cloudflare Workers
+
+```bash
+npm run deploy
+```
+
+> **注意**：部署到 Cloudflare 時請使用 Webhook 模式（`/bot` 端點），本地測試可使用 Long Polling (`npm run dev:tg`)。
 
 ### 設定Telegram Bot的模式（Webhook / Long Polling）
 #### 查狀態

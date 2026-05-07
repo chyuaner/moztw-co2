@@ -3,25 +3,32 @@ import { env } from 'hono/adapter';
 import { webhookCallback } from 'grammy';
 import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
 import { SwitchBot, SensorConfig } from './switchBot.js';
+import { IStore } from './store.js';
 
-export const app = new Hono();
-// 環境變數型別定義
-type Bindings = {
+export type Variables = {
+  store: IStore;
+};
+
+export type Bindings = {
   TELEGRAM_BOT_TOKEN: string;
   SENSORS_CONFIG: string; // JSON 字串格式
+  SENSOR_KV?: any;
 };
+
+export const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 // 取得感測器實例列表的輔助函式
 const getSensors = (c: any) => {
   const bindings = env<Bindings>(c);
   const configStr = bindings.SENSORS_CONFIG || '[]';
+  const store = c.get('store');
   
   try {
     const configs: SensorConfig[] = JSON.parse(configStr);
     return configs.map((cfg) => {
       // 預留未來擴充其他廠牌 IoT 設備的彈性
       // if (cfg.vendor === 'other') return new OtherBot(cfg);
-      return new SwitchBot(cfg);
+      return new SwitchBot(cfg, store);
     });
   } catch (error) {
     console.error('[Config Error] Failed to parse SENSORS_CONFIG:', error);
@@ -49,7 +56,7 @@ const getSpaceApiSensors = async (c: any) => {
       unit: '°C',
       location: item.sensor.id,
       // name: item.sensor.name,
-      lastchange: now
+      lastchange: item.sensor.lastchange || now
     }));
 
   const humidity = dataList
@@ -59,7 +66,7 @@ const getSpaceApiSensors = async (c: any) => {
       unit: '%',
       location: item.sensor.id,
       // name: item.sensor.name,
-      lastchange: now
+      lastchange: item.sensor.lastchange || now
     }));
 
   const carbondioxide = dataList
@@ -69,7 +76,7 @@ const getSpaceApiSensors = async (c: any) => {
       unit: 'ppm',
       location: item.sensor.id,
       // name: item.sensor.name,
-      lastchange: now
+      lastchange: item.sensor.lastchange || now
     }));
 
   // 只回傳 sensors 區段的內容
@@ -117,7 +124,7 @@ app.post('/bot/:token', async (c) => {
     console.error('[Config Error] Failed to parse SENSORS_CONFIG for Bot:', e);
   }
 
-  const bot = createBot(TELEGRAM_BOT_TOKEN, sensorsConfig);
+  const bot = createBot(TELEGRAM_BOT_TOKEN, sensorsConfig, c.get('store'));
   
   // 使用 grammY 內建的 webhookCallback，並指定 adapter 為 'hono'
   const handleUpdate = webhookCallback(bot, 'hono');

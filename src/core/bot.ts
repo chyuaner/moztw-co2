@@ -1,11 +1,12 @@
 import { Bot } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
+import { IStore } from './store.js';
 
-export const createBot = (token: string, sensorsConfig: SensorConfig[]) => {
+export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore) => {
   const bot = new Bot(token);
 
   // 初始化所有感測器
-  const getSensors = () => sensorsConfig.map(cfg => new SwitchBot(cfg));
+  const getSensors = () => sensorsConfig.map(cfg => new SwitchBot(cfg, store));
 
   // 指令：/space - 顯示所有資訊
   bot.command('co2', async (ctx) => {

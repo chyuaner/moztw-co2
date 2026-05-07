@@ -1,38 +1,44 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "moztw-space-info-api",
-  "main": "src/worker.ts",
-  "compatibility_date": "2026-05-06"
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "moztw-space-info-api",
+	"main": "src/worker.ts",
+	"compatibility_date": "2026-05-06",
+	// "compatibility_flags": [
+	//   "nodejs_compat"
+	// ],
+	// "vars": {
+	//   "MY_VAR": "my-variable"
+	// },
+	"kv_namespaces": [
+		{
+			"binding": "SENSOR_KV",
+			"id": "placeholder_id_for_kv",
+			"preview_id": "placeholder_id_for_preview_kv"
+		},
+		{
+			"binding": "MOZTW_SENSORS",
+			"id": "b18aeeed328d461c9ef8450dbb8916f4",
+			"remote": true
+		}
+	],
+	// "r2_buckets": [
+	//   {
+	//     "binding": "MY_BUCKET",
+	//     "bucket_name": "my-bucket"
+	//   }
+	// ],
+	// "d1_databases": [
+	//   {
+	//     "binding": "MY_DB",
+	//     "database_name": "my-database",
+	//     "database_id": ""
+	//   }
+	// ],
+	// "ai": {
+	//   "binding": "AI"
+	// },
+	// "observability": {
+	//   "enabled": true,
+	//   "head_sampling_rate": 1
+	// }
 }
