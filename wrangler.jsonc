@@ -12,13 +12,8 @@
 	"kv_namespaces": [
 		{
 			"binding": "SENSOR_KV",
-			"id": "placeholder_id_for_kv",
-			"preview_id": "placeholder_id_for_preview_kv"
-		},
-		{
-			"binding": "MOZTW_SENSORS",
 			"id": "b18aeeed328d461c9ef8450dbb8916f4",
-			"remote": true
+      "remote": true
 		}
 	],
 	// "r2_buckets": [
