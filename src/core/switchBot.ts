@@ -14,6 +14,7 @@ export interface SensorDataRecord {
   lastchangeTemperature?: number;
   lastchangeHumidity?: number;
   lastchangeCo2?: number;
+  lastchange?: number;
 }
 
 export interface SwitchBotData {
@@ -38,6 +39,7 @@ export class SwitchBot {
   public lastchangeTemperature?: number;
   public lastchangeHumidity?: number;
   public lastchangeCo2?: number;
+  public lastchange?: number;
   
   // 避免同時間併發觸發多次 fetch
   private fetchPromise: Promise<SwitchBotData> | null = null;
@@ -59,13 +61,15 @@ export class SwitchBot {
    * 共用的儲存邏輯
    * 無論是主動詢問(fetch)還是被動接收(webhook)，最後儲存時都走一樣的邏輯
    */
-  private async saveToStore(newData: Partial<SwitchBotData>) {
+  private async saveToStore(newData: Partial<SwitchBotData>, updateTime?: number) {
     const now = Math.floor(Date.now() / 1000);
+    const time = updateTime || now;
     
     if (!this.store) {
        this.lastchangeTemperature = (this.data?.temperature === newData.temperature) ? (this.lastchangeTemperature || now) : now;
        this.lastchangeHumidity = (this.data?.humidity === newData.humidity) ? (this.lastchangeHumidity || now) : now;
        this.lastchangeCo2 = (this.data?.co2 === newData.co2) ? (this.lastchangeCo2 || now) : now;
+       this.lastchange = time;
        return;
     }
 
@@ -79,6 +83,7 @@ export class SwitchBot {
     this.lastchangeTemperature = (prev?.temperature === updatedTemperature) ? (prev?.lastchangeTemperature || now) : now;
     this.lastchangeHumidity = (prev?.humidity === updatedHumidity) ? (prev?.lastchangeHumidity || now) : now;
     this.lastchangeCo2 = (prev?.co2 === updatedCo2) ? (prev?.lastchangeCo2 || now) : now;
+    this.lastchange = time;
 
     try {
       await this.store.set(recordKey, {
@@ -88,6 +93,7 @@ export class SwitchBot {
         lastchangeTemperature: this.lastchangeTemperature,
         lastchangeHumidity: this.lastchangeHumidity,
         lastchangeCo2: this.lastchangeCo2,
+        lastchange: this.lastchange,
       });
     } catch (err) {
       console.error('[Store Error] Failed to update record:', err);
@@ -104,7 +110,12 @@ export class SwitchBot {
     if (context.CO2 !== undefined) newData.co2 = context.CO2;
     else if (context.co2 !== undefined) newData.co2 = context.co2;
 
-    await this.saveToStore(newData);
+    let updateTime: number | undefined;
+    if (context.timeOfSample) {
+      updateTime = Math.floor(context.timeOfSample / 1000);
+    }
+
+    await this.saveToStore(newData, updateTime);
 
     // 更新記憶體資料
     if (this.data) {
@@ -180,6 +191,7 @@ export class SwitchBot {
         this.lastchangeTemperature = record.lastchangeTemperature;
         this.lastchangeHumidity = record.lastchangeHumidity;
         this.lastchangeCo2 = record.lastchangeCo2;
+        this.lastchange = record.lastchange;
 
         const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
         
