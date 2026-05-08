@@ -26,6 +26,16 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     return ` （${p('year')}/${p('month')}/${p('day')} ${p('hour')}:${p('minute')}:${p('second')}）`;
   };
 
+  // 輔助函式：計算字串視覺顯示寬度，並向右補齊空白
+  const padRight = (text: string, width: number = 22) => {
+    let currentWidth = 0;
+    for (const char of Array.from(text)) {
+      // 如果是全形/中文字元或是 surrogate pair 的 emoji，大約佔用 2 的視覺寬度
+      currentWidth += (char.match(/[^\x00-\xff]/) || char.length > 1) ? 2 : 1;
+    }
+    return text + ' '.repeat(Math.max(0, width - currentWidth));
+  };
+
   // 指令：/space - 顯示所有資訊
   bot.command('co2', async (ctx) => {
     try {
@@ -38,13 +48,13 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
         messages.push(`\n📍 *${s.name}*`);
         
         if (typeof data.temperature === 'number') {
-          messages.push(`🌡 溫度：${data.temperature} °C${formatDate(s.lastchangeTemperature || now)}`);
+          messages.push(`${padRight(`🌡 溫度：${data.temperature} °C`)}${formatDate(s.lastchangeTemperature || now)}`);
         }
         if (typeof data.humidity === 'number') {
-          messages.push(`💧 濕度：${data.humidity} %${formatDate(s.lastchangeHumidity || now)}`);
+          messages.push(`${padRight(`💧 濕度：${data.humidity} %`)}${formatDate(s.lastchangeHumidity || now)}`);
         }
         if (typeof data.co2 === 'number') {
-          messages.push(`☁️ CO2：${data.co2} ppm${formatDate(s.lastchangeCo2 || now)}`);
+          messages.push(`${padRight(`☁️ CO2：${data.co2} ppm`)}${formatDate(s.lastchangeCo2 || now)}`);
         }
       }
       
