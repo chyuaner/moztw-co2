@@ -108,6 +108,37 @@ app.get('/sensors', async (c) => {
   }
 });
 
+// SwitchBot Webhook 接收端點
+app.post('/switch-bot', async (c) => {
+  try {
+    const body = await c.req.json();
+    console.log('[Webhook] Received:', JSON.stringify(body));
+    
+    if (body.eventType === 'changeReport' && body.context && body.context.deviceMac) {
+      const mac = body.context.deviceMac;
+      const sensors = getSensors(c);
+      
+      const targetSensor = sensors.find((s: SwitchBot) => {
+        const configuredMac = s.deviceId.replace(/:/g, '').toUpperCase();
+        return configuredMac === mac.toUpperCase();
+      });
+      
+      if (targetSensor) {
+        await targetSensor.updateFromWebhook(body.context);
+        return c.text('OK');
+      } else {
+        console.warn(`[Webhook] No sensor configured for deviceMac: ${mac}`);
+        return c.text('Device not configured', 404);
+      }
+    }
+    
+    return c.text('Ignored');
+  } catch (err) {
+    console.error('[Webhook] Error:', err);
+    return c.text('Error', 500);
+  }
+});
+
 // Telegram Bot Webhook 接收端點
 app.post('/bot/:token', async (c) => {
   const tokenFromPath = c.req.param('token');
