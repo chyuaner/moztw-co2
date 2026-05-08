@@ -8,24 +8,37 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   // 初始化所有感測器
   const getSensors = () => sensorsConfig.map(cfg => new SwitchBot(cfg, store));
 
+  const formatDate = (timestamp?: number) => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp * 1000);
+    const Y = date.getFullYear();
+    const M = String(date.getMonth() + 1).padStart(2, '0');
+    const D = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    const s = String(date.getSeconds()).padStart(2, '0');
+    return ` （${Y}/${M}/${D} ${h}:${m}:${s}）`;
+  };
+
   // 指令：/space - 顯示所有資訊
   bot.command('co2', async (ctx) => {
     try {
       const sensors = getSensors();
       const messages = ['🏠 *空間目前資訊*'];
+      const now = Math.floor(Date.now() / 1000);
       
       for (const s of sensors) {
         const data = await s.getAll();
         messages.push(`\n📍 *${s.name}*`);
         
         if (typeof data.temperature === 'number') {
-          messages.push(`🌡 溫度：${data.temperature} °C`);
+          messages.push(`🌡 溫度：${data.temperature} °C${formatDate(s.lastchangeTemperature || now)}`);
         }
         if (typeof data.humidity === 'number') {
-          messages.push(`💧 濕度：${data.humidity} %`);
+          messages.push(`💧 濕度：${data.humidity} %${formatDate(s.lastchangeHumidity || now)}`);
         }
         if (typeof data.co2 === 'number') {
-          messages.push(`☁️ CO2：${data.co2} ppm`);
+          messages.push(`☁️ CO2：${data.co2} ppm${formatDate(s.lastchangeCo2 || now)}`);
         }
       }
       
