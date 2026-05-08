@@ -11,13 +11,19 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   const formatDate = (timestamp?: number) => {
     if (!timestamp) return '';
     const date = new Date(timestamp * 1000);
-    const Y = date.getFullYear();
-    const M = String(date.getMonth() + 1).padStart(2, '0');
-    const D = String(date.getDate()).padStart(2, '0');
-    const h = String(date.getHours()).padStart(2, '0');
-    const m = String(date.getMinutes()).padStart(2, '0');
-    const s = String(date.getSeconds()).padStart(2, '0');
-    return ` （${Y}/${M}/${D} ${h}:${m}:${s}）`;
+    const formatter = new Intl.DateTimeFormat('zh-TW', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Taipei',
+    });
+    const parts = formatter.formatToParts(date);
+    const p = (type: string) => parts.find(part => part.type === type)?.value;
+    return ` （${p('year')}/${p('month')}/${p('day')} ${p('hour')}:${p('minute')}:${p('second')}）`;
   };
 
   // 指令：/space - 顯示所有資訊
