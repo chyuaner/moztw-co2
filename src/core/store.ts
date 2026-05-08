@@ -2,7 +2,9 @@ export interface SensorDataRecord {
   temperature?: number;
   humidity?: number;
   co2?: number;
-  lastchange: number;
+  lastchangeTemperature?: number;
+  lastchangeHumidity?: number;
+  lastchangeCo2?: number;
 }
 
 export interface IStore {

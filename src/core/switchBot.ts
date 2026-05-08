@@ -23,7 +23,9 @@ export class SwitchBot {
 
   // 內部變數，只要 fetch 過一次就會一直存著
   private data: SwitchBotData | null = null;
-  public lastchange?: number;
+  public lastchangeTemperature?: number;
+  public lastchangeHumidity?: number;
+  public lastchangeCo2?: number;
   
   // 避免同時間併發觸發多次 fetch
   private fetchPromise: Promise<SwitchBotData> | null = null;
@@ -80,27 +82,22 @@ export class SwitchBot {
       const recordKey = `sensor:${this.id}`;
       const now = Math.floor(Date.now() / 1000);
       const prev = await this.store.get(recordKey);
-      let lastchange = now;
 
-      if (prev) {
-        if (prev.temperature === this.data.temperature &&
-            prev.humidity === this.data.humidity &&
-            prev.co2 === this.data.co2) {
-          lastchange = prev.lastchange || now;
-        }
-      }
+      this.lastchangeTemperature = (prev?.temperature === this.data.temperature) ? (prev?.lastchangeTemperature || now) : now;
+      this.lastchangeHumidity = (prev?.humidity === this.data.humidity) ? (prev?.lastchangeHumidity || now) : now;
+      this.lastchangeCo2 = (prev?.co2 === this.data.co2) ? (prev?.lastchangeCo2 || now) : now;
 
       try {
         await this.store.set(recordKey, {
           temperature: this.data.temperature,
           humidity: this.data.humidity,
           co2: this.data.co2,
-          lastchange
+          lastchangeTemperature: this.lastchangeTemperature,
+          lastchangeHumidity: this.lastchangeHumidity,
+          lastchangeCo2: this.lastchangeCo2,
         });
-        this.lastchange = lastchange;
       } catch (err) {
         console.error('[Store Error] Failed to update record:', err);
-        this.lastchange = now;
       }
     }
 
