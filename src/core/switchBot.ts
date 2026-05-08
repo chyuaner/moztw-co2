@@ -7,6 +7,15 @@ export interface SensorConfig {
   secret?: string;
 }
 
+export interface SensorDataRecord {
+  temperature?: number;
+  humidity?: number;
+  co2?: number;
+  lastchangeTemperature?: number;
+  lastchangeHumidity?: number;
+  lastchangeCo2?: number;
+}
+
 export interface SwitchBotData {
   temperature: number;
   humidity: number;
@@ -19,7 +28,7 @@ export class SwitchBot {
   private deviceId: string;
   private token: string;
   private secret: string;
-  private store?: import('./store.js').IStore;
+  private store?: import('./store.js').IStore<SensorDataRecord>;
 
   // 內部變數，只要 fetch 過一次就會一直存著
   private data: SwitchBotData | null = null;
@@ -30,7 +39,7 @@ export class SwitchBot {
   // 避免同時間併發觸發多次 fetch
   private fetchPromise: Promise<SwitchBotData> | null = null;
 
-  constructor(config: SensorConfig, store?: import('./store.js').IStore) {
+  constructor(config: SensorConfig, store?: import('./store.js').IStore<SensorDataRecord>) {
     this.id = config.id;
     this.name = config.name;
     this.deviceId = config.deviceId || '';

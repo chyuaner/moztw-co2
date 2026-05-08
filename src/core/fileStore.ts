@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { IStore, SensorDataRecord } from './store.js';
 
-export class FileStore implements IStore {
+export class FileStore<T = any> implements IStore<T> {
   private filePath: string;
 
   constructor(filePath: string) {
@@ -18,7 +18,7 @@ export class FileStore implements IStore {
     }
   }
 
-  async get(key: string): Promise<SensorDataRecord | null> {
+  async get(key: string): Promise<T | null> {
     try {
       const data = await fs.readFile(this.filePath, 'utf-8');
       const parsed = JSON.parse(data);
@@ -28,9 +28,9 @@ export class FileStore implements IStore {
     }
   }
 
-  async set(key: string, value: SensorDataRecord): Promise<void> {
+  async set(key: string, value: T): Promise<void> {
     await this.ensureDir();
-    let parsed: Record<string, SensorDataRecord> = {};
+    let parsed: Record<string, T> = {};
     try {
       const data = await fs.readFile(this.filePath, 'utf-8');
       parsed = JSON.parse(data);
