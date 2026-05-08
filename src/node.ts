@@ -9,7 +9,7 @@ const mainApp = new Hono();
 
 mainApp.use('*', async (c, next) => {
   if (!c.get('store')) {
-    c.set('store', new FileStore(path.resolve(process.cwd(), '.data/sensors.json')));
+    c.set('store', new FileStore(path.resolve(process.cwd(), '.data/')));
   }
   await next();
 });

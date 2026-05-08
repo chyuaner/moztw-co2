@@ -3,10 +3,13 @@ import path from 'node:path';
 import { IStore, SensorDataRecord } from './store.js';
 
 export class FileStore<T = any> implements IStore<T> {
+  private fileName = 'data.json';
+  private folderPath: string;
   private filePath: string;
 
-  constructor(filePath: string) {
-    this.filePath = filePath;
+  constructor(folderPath: string) {
+    this.folderPath = folderPath;
+    this.filePath = path.join(folderPath, this.fileName);
   }
 
   private async ensureDir() {
