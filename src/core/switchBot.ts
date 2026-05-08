@@ -167,7 +167,17 @@ export class SwitchBot {
 
     await this.saveToStore(newData);
 
-    this.data = newData;
+    if (this.data) {
+      if (newData.temperature !== undefined) this.data.temperature = newData.temperature;
+      if (newData.humidity !== undefined) this.data.humidity = newData.humidity;
+      if (newData.co2 !== undefined) this.data.co2 = newData.co2;
+    } else {
+      this.data = {
+        temperature: newData.temperature,
+        humidity: newData.humidity,
+        co2: newData.co2,
+      };
+    }
     return this.data;
   }
 
