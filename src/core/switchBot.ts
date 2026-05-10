@@ -134,7 +134,7 @@ export class SwitchBot {
     }
 
     try {
-      await this.store.set(recordKey, {
+      await this.store.put(recordKey, {
         temperature: updatedTemperature,
         temperature_lastchange: this.temperature_lastchange,
         temperature_iswebhook: this.temperature_iswebhook,

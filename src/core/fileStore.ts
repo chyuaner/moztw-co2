@@ -31,7 +31,7 @@ export class FileStore<T = any> implements IStore<T> {
     }
   }
 
-  async set(key: string, value: T): Promise<void> {
+  async put(key: string, value: T): Promise<void> {
     await this.ensureDir();
     let parsed: Record<string, T> = {};
     try {

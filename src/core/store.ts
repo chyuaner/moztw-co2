@@ -1,6 +1,6 @@
 export interface IStore<T = any> {
   get(key: string): Promise<T | null>;
-  set(key: string, value: T): Promise<void>;
+  put(key: string, value: T): Promise<void>;
 }
 
 export class KVStore<T = any> implements IStore<T> {
@@ -12,7 +12,7 @@ export class KVStore<T = any> implements IStore<T> {
     return data as T | null;
   }
 
-  async set(key: string, value: T): Promise<void> {
+  async put(key: string, value: T): Promise<void> {
     if (!this.kv) return;
     await this.kv.put(key, JSON.stringify(value));
   }
