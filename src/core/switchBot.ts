@@ -73,7 +73,7 @@ export class SwitchBot {
        return;
     }
 
-    const recordKey = `sensor:${this.id}`;
+    const recordKey = `sensor:${this.deviceId}`;
     const prev = await this.store.get(recordKey);
 
     const updatedTemperature = newData.temperature !== undefined ? newData.temperature : prev?.temperature;
@@ -189,7 +189,7 @@ export class SwitchBot {
     let isStale = true;
 
     if (this.store) {
-      const recordKey = `sensor:${this.id}`;
+      const recordKey = `sensor:${this.deviceId}`;
       const record = await this.store.get(recordKey);
       
       if (record) {
