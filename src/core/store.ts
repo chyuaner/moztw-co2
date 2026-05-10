@@ -9,6 +9,14 @@ export interface IStore<T = any> {
    * 儲存資料到特定範圍 (對應 Node 模式的獨立檔案或 KV 的 Prefix)
    */
   scopedPut(scope: string, key: string, value: T): Promise<void>;
+  /**
+   * 列出所有符合前綴的 Key (對齊 Cloudflare KV 介面)
+   */
+  list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }>;
 }
 
 export class KVStore<T = any> implements IStore<T> {
@@ -37,6 +45,22 @@ export class KVStore<T = any> implements IStore<T> {
     const fullKey = `${scope}:${key}`;
     await this.kv.put(fullKey, JSON.stringify(value));
   }
+
+  async list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }> {
+    if (!this.kv) return { keys: [], list_complete: true };
+    const result = await this.kv.list(options);
+    return {
+      keys: result.keys.map((k: any) => ({ name: k.name })),
+      list_complete: result.list_complete,
+      cursor: result.cursor,
+    };
+  }
 }
+
+
 
 
