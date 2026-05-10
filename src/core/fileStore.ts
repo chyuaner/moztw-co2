@@ -43,4 +43,32 @@ export class FileStore<T = any> implements IStore<T> {
     parsed[key] = value;
     await fs.writeFile(this.filePath, JSON.stringify(parsed, null, 2), 'utf-8');
   }
+
+  async scopedGet(scope: string, key: string): Promise<T | null> {
+    const scopePath = path.join(this.folderPath, `${scope}.json`);
+    try {
+      const data = await fs.readFile(scopePath, 'utf-8');
+      const parsed = JSON.parse(data);
+      return parsed[key] || null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  async scopedPut(scope: string, key: string, value: T): Promise<void> {
+    await this.ensureDir();
+    const scopePath = path.join(this.folderPath, `${scope}.json`);
+    let parsed: Record<string, T> = {};
+    try {
+      const data = await fs.readFile(scopePath, 'utf-8');
+      parsed = JSON.parse(data);
+    } catch (err) {
+      // ignore
+    }
+    parsed[key] = value;
+    await fs.writeFile(scopePath, JSON.stringify(parsed, null, 2), 'utf-8');
+  }
 }
+
+
+

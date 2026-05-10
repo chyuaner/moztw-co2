@@ -133,21 +133,37 @@ export class SwitchBot {
       this.lastchange = prev?.lastchange;
     }
 
+    const savedata = {
+      temperature: updatedTemperature,
+      temperature_lastchange: this.temperature_lastchange,
+      temperature_iswebhook: this.temperature_iswebhook,
+      humidity: updatedHumidity,
+      humidity_lastchange: this.humidity_lastchange,
+      humidity_iswebhook: this.humidity_iswebhook,
+      co2: updatedCo2,
+      co2_lastchange: this.co2_lastchange,
+      co2_iswebhook: this.co2_iswebhook,
+      lastchange: this.lastchange,
+    };
+
+    // 1. 更新當前狀態 (用於 API/Bot 快速查詢)
     try {
-      await this.store.put(recordKey, {
-        temperature: updatedTemperature,
-        temperature_lastchange: this.temperature_lastchange,
-        temperature_iswebhook: this.temperature_iswebhook,
-        humidity: updatedHumidity,
-        humidity_lastchange: this.humidity_lastchange,
-        humidity_iswebhook: this.humidity_iswebhook,
-        co2: updatedCo2,
-        co2_lastchange: this.co2_lastchange,
-        co2_iswebhook: this.co2_iswebhook,
-        lastchange: this.lastchange,
-      });
+      await this.store.put(recordKey, savedata);
     } catch (err) {
-      console.error('[Store Error] Failed to update record:', err);
+      console.error('[Store Error] Failed to update current record:', err);
+    }
+
+    // 2. 寫入原始資料 (Raw Ingestion, 用於長期歷史紀錄回溯，避免 Race Condition)
+    try {
+      const timestampMs = Date.now();
+      const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6); // YYYYMM (按月分桶)
+      const scope = `deviceId:${this.deviceId}:${dateStr}`;
+      
+      if (this.store) {
+        await this.store.scopedPut(scope, `${timestampMs}`, savedata);
+      }
+    } catch (err) {
+      console.error('[Store Error] Failed to write raw ingestion record:', err);
     }
   }
 
