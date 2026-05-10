@@ -147,13 +147,24 @@ export class SwitchBot {
     };
 
     // 1. 更新當前狀態 (用於 API/Bot 快速查詢)
+    // 只有在數值有變動，或者距離上次同步超過一定時間（例如一小時）才強制寫入 KV 節省次數
+    const isDataChanged = 
+      (newData.temperature !== undefined && prev?.temperature !== updatedTemperature) ||
+      (newData.humidity !== undefined && prev?.humidity !== updatedHumidity) ||
+      (newData.co2 !== undefined && prev?.co2 !== updatedCo2);
+
     try {
       await this.store.put(recordKey, savedata);
     } catch (err) {
       console.error('[Store Error] Failed to update current record:', err);
     }
 
-    // 2. 寫入原始資料 (Raw Ingestion, 用於長期歷史紀錄回溯，避免 Race Condition)
+    // 2. 寫入原始資料 (Raw Ingestion)
+    // 如果數值完全沒變，就跳過歷史紀錄寫入，節省 KV PUT 額度
+    if (!isDataChanged) {
+      return;
+    }
+
     try {
       const timestampMs = Date.now();
       const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6); // YYYYMM (按月分桶)
@@ -275,15 +286,13 @@ export class SwitchBot {
 
         const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
         
-        const tsStale = checkStale(this.temperature_lastchange);
-        const humStale = checkStale(this.humidity_lastchange);
-        const coStale = record.co2 !== undefined ? checkStale(this.co2_lastchange) : false;
-        
-        isStale = tsStale || humStale || coStale;
+        // 改用整體的 lastchange (最後同步時間) 來判斷是否過期
+        // 這樣即使數值沒變，只要剛同步過，就不會重複 fetch
+        isStale = checkStale(this.lastchange);
       }
     } else if (this.data) {
        const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
-       isStale = checkStale(this.temperature_lastchange) || checkStale(this.humidity_lastchange) || (this.data.co2 !== undefined && checkStale(this.co2_lastchange));
+       isStale = checkStale(this.lastchange);
     }
 
     if (!isStale && this.data) {

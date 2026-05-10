@@ -97,16 +97,17 @@ https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>
 https://api.telegram.org/bot<TG_TOKEN>/deleteWebhook
 ```
 
-## lastchange判定原則
+## lastchange 判定原則
 
 ### 1. `lastchange` (連線/確認時間)
 *   只要 `fetch` 成功或收到 `webhook`，且該裝置不是 `only_webhook` 的主動查詢，`lastchange` 就會更新為當前時間。
 *   這代表了「系統最後一次與該設備取得聯繫」的時間，與數值是否有變無關。
+*   **快取保護**：系統會以 `lastchange` 結合 `staleThresholdSeconds` (預設 600s) 判定資料是否過期。若未過期，主動查詢時會直接回傳快取內容，不發起 API 請求與 KV 寫入。
 
 ### 2. `temperature_lastchange` (數值變動時間)
 *   只有當新取得的數值（如溫度）與資料庫中現有的數值**不同**時，才會更新這個項目的 `lastchange`。
 *   如果數值相同，則保留舊的變動時間。
-*   **注意**：`temperature_iswebhook` 則會每次都更新，用來記錄「最後一次確認這個數值」的來源。
+*   **寫入優化**：若所有感測數值均未變動，系統將**跳過歷史紀錄 (Raw Ingestion)** 的寫入，僅更新目前的狀態以節省 Cloudflare KV PUT 額度。
 
 ### 3. `only_webhook` 裝置保護
 *   如果裝置設定為 `only_webhook: true`，則主動的 `fetch` 行為不會更新整體的 `lastchange`。
