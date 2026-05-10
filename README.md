@@ -97,5 +97,20 @@ https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>
 https://api.telegram.org/bot<TG_TOKEN>/deleteWebhook
 ```
 
+## lastchange判定原則
+
+### 1. `lastchange` (連線/確認時間)
+*   只要 `fetch` 成功或收到 `webhook`，且該裝置不是 `only_webhook` 的主動查詢，`lastchange` 就會更新為當前時間。
+*   這代表了「系統最後一次與該設備取得聯繫」的時間，與數值是否有變無關。
+
+### 2. `temperature_lastchange` (數值變動時間)
+*   只有當新取得的數值（如溫度）與資料庫中現有的數值**不同**時，才會更新這個項目的 `lastchange`。
+*   如果數值相同，則保留舊的變動時間。
+*   **注意**：`temperature_iswebhook` 則會每次都更新，用來記錄「最後一次確認這個數值」的來源。
+
+### 3. `only_webhook` 裝置保護
+*   如果裝置設定為 `only_webhook: true`，則主動的 `fetch` 行為不會更新整體的 `lastchange`。
+*   該裝置的 `lastchange` 只有在真正收到 Webhook 通知時才會變動，符合您「記錄上次被通知時間」的需求。
+
 ## 📄 授權
 [MPL-2.0](LICENSE)
