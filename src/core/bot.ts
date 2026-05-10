@@ -23,7 +23,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     });
     const parts = formatter.formatToParts(date);
     const p = (type: string) => parts.find(part => part.type === type)?.value;
-    return ` （${p('year')}/${p('month')}/${p('day')} ${p('hour')}:${p('minute')}:${p('second')}）`;
+    return `${p('year')}/${p('month')}/${p('day')} ${p('hour')}:${p('minute')}:${p('second')}`;
   };
 
   // 輔助函式：計算字串視覺顯示寬度，並向右補齊空白
@@ -48,14 +48,15 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
         messages.push(`\n📍 *${s.name}*`);
         
         if (typeof data.temperature === 'number') {
-          messages.push(`${padRight(`🌡 溫度：${data.temperature} °C`)}${formatDate(s.lastchangeTemperature || now)}`);
+          messages.push(`🌡 溫度：${data.temperature} °C`);
         }
         if (typeof data.humidity === 'number') {
-          messages.push(`${padRight(`💧 濕度：${data.humidity} %`)}${formatDate(s.lastchangeHumidity || now)}`);
+          messages.push(`💧 濕度：${data.humidity} %`);
         }
         if (typeof data.co2 === 'number') {
-          messages.push(`${padRight(`☁️ CO2：${data.co2} ppm`)}${formatDate(s.lastchangeCo2 || now)}`);
+          messages.push(`☁️ CO2：${data.co2} ppm`);
         }
+        messages.push(`🕒 更新時間：${formatDate(s.lastchange || now)}`);
       }
       
       await ctx.reply(messages.join('\n'), { parse_mode: 'Markdown' });

@@ -56,7 +56,7 @@ const getSpaceApiSensors = async (c: any) => {
       unit: '°C',
       location: item.sensor.id,
       // name: item.sensor.name,
-      lastchange: item.sensor.lastchangeTemperature || now
+      lastchange: item.sensor.lastchange || now
     }));
 
   const humidity = dataList
@@ -66,7 +66,7 @@ const getSpaceApiSensors = async (c: any) => {
       unit: '%',
       location: item.sensor.id,
       // name: item.sensor.name,
-      lastchange: item.sensor.lastchangeHumidity || now
+      lastchange: item.sensor.lastchange || now
     }));
 
   const carbondioxide = dataList
@@ -76,7 +76,7 @@ const getSpaceApiSensors = async (c: any) => {
       unit: 'ppm',
       location: item.sensor.id,
       // name: item.sensor.name,
-      lastchange: item.sensor.lastchangeCo2 || now
+      lastchange: item.sensor.lastchange || now
     }));
 
   // 只回傳 sensors 區段的內容
