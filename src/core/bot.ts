@@ -114,13 +114,13 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   //   }
   // });
 
-  // 過濾掉所有未被上方指令處理過的文字訊息
-  bot.on('message:text', async (ctx) => {
-    // 只有在訊息不是指令時才提示
-    if (!ctx.message.text.startsWith('/')) {
-      await ctx.reply('請使用 /co2 指令');
-    }
-  });
+  // // 過濾掉所有未被上方指令處理過的文字訊息
+  // bot.on('message:text', async (ctx) => {
+  //   // 只有在訊息不是指令時才提示
+  //   if (!ctx.message.text.startsWith('/')) {
+  //     await ctx.reply('請使用 /co2 指令');
+  //   }
+  // });
 
   return bot;
 };
