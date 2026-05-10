@@ -37,7 +37,7 @@ export class SwitchBot {
   private store?: import('./store.js').IStore<SensorDataRecord>;
 
   // 在類別頂部定義過期時間變數，單位秒 (預設 1小時 = 3600秒)
-  public staleThresholdSeconds: number = 600;
+  public staleThresholdSeconds: number = 300;
 
   // 內部變數，只要 fetch 過一次就會一直存著
   private data: SwitchBotData | null = null;
