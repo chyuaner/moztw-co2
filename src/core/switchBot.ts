@@ -5,15 +5,19 @@ export interface SensorConfig {
   deviceId?: string;
   token?: string;
   secret?: string;
+  only_webhook?: boolean;
 }
 
 export interface SensorDataRecord {
   temperature?: number;
+  temperature_lastchange?: number;
+  temperature_iswebhook?: boolean;
   humidity?: number;
+  humidity_lastchange?: number;
+  humidity_iswebhook?: boolean;
   co2?: number;
-  lastchangeTemperature?: number;
-  lastchangeHumidity?: number;
-  lastchangeCo2?: number;
+  co2_lastchange?: number;
+  co2_iswebhook?: boolean;
   lastchange?: number;
 }
 
@@ -27,6 +31,7 @@ export class SwitchBot {
   public id: string;
   public name: string;
   public deviceId: string;
+  public only_webhook: boolean = false;
   private token: string;
   private secret: string;
   private store?: import('./store.js').IStore<SensorDataRecord>;
@@ -36,9 +41,12 @@ export class SwitchBot {
 
   // 內部變數，只要 fetch 過一次就會一直存著
   private data: SwitchBotData | null = null;
-  public lastchangeTemperature?: number;
-  public lastchangeHumidity?: number;
-  public lastchangeCo2?: number;
+  public temperature_lastchange?: number;
+  public temperature_iswebhook?: boolean;
+  public humidity_lastchange?: number;
+  public humidity_iswebhook?: boolean;
+  public co2_lastchange?: number;
+  public co2_iswebhook?: boolean;
   public lastchange?: number;
   
   // 避免同時間併發觸發多次 fetch
@@ -50,6 +58,7 @@ export class SwitchBot {
     this.deviceId = config.deviceId || '';
     this.token = config.token || '';
     this.secret = config.secret || '';
+    this.only_webhook = config.only_webhook || false;
     this.store = store;
   }
 
@@ -61,15 +70,29 @@ export class SwitchBot {
    * 共用的儲存邏輯
    * 無論是主動詢問(fetch)還是被動接收(webhook)，最後儲存時都走一樣的邏輯
    */
-  private async saveToStore(newData: Partial<SwitchBotData>, updateTime?: number) {
+  private async saveToStore(newData: Partial<SwitchBotData>, updateTime?: number, isWebhook: boolean = false) {
     const now = Math.floor(Date.now() / 1000);
     const time = updateTime || now;
     
+    // 如果是 fetch 且設定了 only_webhook，則不更新整體的 lastchange
+    const shouldUpdateOverallLastchange = !(this.only_webhook && !isWebhook);
+
     if (!this.store) {
-       this.lastchangeTemperature = (this.data?.temperature === newData.temperature) ? (this.lastchangeTemperature || now) : now;
-       this.lastchangeHumidity = (this.data?.humidity === newData.humidity) ? (this.lastchangeHumidity || now) : now;
-       this.lastchangeCo2 = (this.data?.co2 === newData.co2) ? (this.lastchangeCo2 || now) : now;
-       this.lastchange = time;
+       if (newData.temperature !== undefined) {
+         this.temperature_lastchange = (this.data?.temperature === newData.temperature) ? (this.temperature_lastchange || now) : now;
+         this.temperature_iswebhook = isWebhook;
+       }
+       if (newData.humidity !== undefined) {
+         this.humidity_lastchange = (this.data?.humidity === newData.humidity) ? (this.humidity_lastchange || now) : now;
+         this.humidity_iswebhook = isWebhook;
+       }
+       if (newData.co2 !== undefined) {
+         this.co2_lastchange = (this.data?.co2 === newData.co2) ? (this.co2_lastchange || now) : now;
+         this.co2_iswebhook = isWebhook;
+       }
+       if (shouldUpdateOverallLastchange) {
+         this.lastchange = time;
+       }
        return;
     }
 
@@ -80,19 +103,47 @@ export class SwitchBot {
     const updatedHumidity = newData.humidity !== undefined ? newData.humidity : prev?.humidity;
     const updatedCo2 = newData.co2 !== undefined ? newData.co2 : prev?.co2;
 
-    this.lastchangeTemperature = (prev?.temperature === updatedTemperature) ? (prev?.lastchangeTemperature || now) : now;
-    this.lastchangeHumidity = (prev?.humidity === updatedHumidity) ? (prev?.lastchangeHumidity || now) : now;
-    this.lastchangeCo2 = (prev?.co2 === updatedCo2) ? (prev?.lastchangeCo2 || now) : now;
-    this.lastchange = time;
+    if (newData.temperature !== undefined) {
+      this.temperature_lastchange = (prev?.temperature === updatedTemperature) ? (prev?.temperature_lastchange || now) : now;
+      this.temperature_iswebhook = isWebhook;
+    } else {
+      this.temperature_lastchange = prev?.temperature_lastchange;
+      this.temperature_iswebhook = prev?.temperature_iswebhook;
+    }
+
+    if (newData.humidity !== undefined) {
+      this.humidity_lastchange = (prev?.humidity === updatedHumidity) ? (prev?.humidity_lastchange || now) : now;
+      this.humidity_iswebhook = isWebhook;
+    } else {
+      this.humidity_lastchange = prev?.humidity_lastchange;
+      this.humidity_iswebhook = prev?.humidity_iswebhook;
+    }
+
+    if (newData.co2 !== undefined) {
+      this.co2_lastchange = (prev?.co2 === updatedCo2) ? (prev?.co2_lastchange || now) : now;
+      this.co2_iswebhook = isWebhook;
+    } else {
+      this.co2_lastchange = prev?.co2_lastchange;
+      this.co2_iswebhook = prev?.co2_iswebhook;
+    }
+
+    if (shouldUpdateOverallLastchange) {
+      this.lastchange = time;
+    } else {
+      this.lastchange = prev?.lastchange;
+    }
 
     try {
       await this.store.set(recordKey, {
         temperature: updatedTemperature,
+        temperature_lastchange: this.temperature_lastchange,
+        temperature_iswebhook: this.temperature_iswebhook,
         humidity: updatedHumidity,
+        humidity_lastchange: this.humidity_lastchange,
+        humidity_iswebhook: this.humidity_iswebhook,
         co2: updatedCo2,
-        lastchangeTemperature: this.lastchangeTemperature,
-        lastchangeHumidity: this.lastchangeHumidity,
-        lastchangeCo2: this.lastchangeCo2,
+        co2_lastchange: this.co2_lastchange,
+        co2_iswebhook: this.co2_iswebhook,
         lastchange: this.lastchange,
       });
     } catch (err) {
@@ -115,7 +166,7 @@ export class SwitchBot {
       updateTime = Math.floor(context.timeOfSample / 1000);
     }
 
-    await this.saveToStore(newData, updateTime);
+    await this.saveToStore(newData, updateTime, true);
 
     // 更新記憶體資料
     if (this.data) {
@@ -165,7 +216,7 @@ export class SwitchBot {
       co2: json.body.CO2 !== undefined ? json.body.CO2 : json.body.co2,
     };
 
-    await this.saveToStore(newData);
+    await this.saveToStore(newData, undefined, false);
 
     if (this.data) {
       if (newData.temperature !== undefined) this.data.temperature = newData.temperature;
@@ -198,26 +249,34 @@ export class SwitchBot {
           humidity: record.humidity !== undefined ? record.humidity : this.data?.humidity,
           co2: record.co2 !== undefined ? record.co2 : this.data?.co2,
         };
-        this.lastchangeTemperature = record.lastchangeTemperature;
-        this.lastchangeHumidity = record.lastchangeHumidity;
-        this.lastchangeCo2 = record.lastchangeCo2;
+        this.temperature_lastchange = record.temperature_lastchange;
+        this.temperature_iswebhook = record.temperature_iswebhook;
+        this.humidity_lastchange = record.humidity_lastchange;
+        this.humidity_iswebhook = record.humidity_iswebhook;
+        this.co2_lastchange = record.co2_lastchange;
+        this.co2_iswebhook = record.co2_iswebhook;
         this.lastchange = record.lastchange;
 
         const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
         
-        const tsStale = checkStale(this.lastchangeTemperature);
-        const humStale = checkStale(this.lastchangeHumidity);
-        const coStale = record.co2 !== undefined ? checkStale(this.lastchangeCo2) : false;
+        const tsStale = checkStale(this.temperature_lastchange);
+        const humStale = checkStale(this.humidity_lastchange);
+        const coStale = record.co2 !== undefined ? checkStale(this.co2_lastchange) : false;
         
         isStale = tsStale || humStale || coStale;
       }
     } else if (this.data) {
        const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
-       isStale = checkStale(this.lastchangeTemperature) || checkStale(this.lastchangeHumidity) || (this.data.co2 !== undefined && checkStale(this.lastchangeCo2));
+       isStale = checkStale(this.temperature_lastchange) || checkStale(this.humidity_lastchange) || (this.data.co2 !== undefined && checkStale(this.co2_lastchange));
     }
 
     if (!isStale && this.data) {
       return this.data;
+    }
+
+    // 如果設定了 only_webhook，則不進行主動 fetch，直接回傳目前有的資料 (不論是否過期)
+    if (this.only_webhook) {
+      return this.data || {};
     }
 
     if (!this.fetchPromise) {
@@ -254,3 +313,4 @@ export class SwitchBot {
     return data.co2;
   }
 }
+
