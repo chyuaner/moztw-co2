@@ -45,30 +45,36 @@ export class FileStore<T = any> implements IStore<T> {
   }
 
   async scopedGet(scope: string, key: string): Promise<T | null> {
-    const scopePath = path.join(this.folderPath, `${scope}.json`);
+    const scopePath = path.join(this.folderPath, `${scope}.jsonl`);
     try {
       const data = await fs.readFile(scopePath, 'utf-8');
-      const parsed = JSON.parse(data);
-      return parsed[key] || null;
+      const lines = data.split('\n');
+      // 從後往前找，以取得最新的紀錄 (如果有重複 key)
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        try {
+          const entry = JSON.parse(line);
+          if (entry.k === key) return entry.v;
+        } catch (e) {
+          continue;
+        }
+      }
     } catch (err) {
       return null;
     }
+    return null;
   }
 
   async scopedPut(scope: string, key: string, value: T): Promise<void> {
     await this.ensureDir();
-    const scopePath = path.join(this.folderPath, `${scope}.json`);
-    let parsed: Record<string, T> = {};
-    try {
-      const data = await fs.readFile(scopePath, 'utf-8');
-      parsed = JSON.parse(data);
-    } catch (err) {
-      // ignore
-    }
-    parsed[key] = value;
-    await fs.writeFile(scopePath, JSON.stringify(parsed, null, 2), 'utf-8');
+    const scopePath = path.join(this.folderPath, `${scope}.jsonl`);
+    const entry = { k: key, v: value };
+    // 使用 appendFile 進行原子追加，避免同時寫入衝突
+    await fs.appendFile(scopePath, JSON.stringify(entry) + '\n', 'utf-8');
   }
 }
+
 
 
 
