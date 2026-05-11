@@ -291,6 +291,8 @@ export class SwitchBot {
     return await this.ensureData();
   }
 
+  // ---------------------------------------------------------------------------
+
   public async getTemperature(): Promise<number | undefined> {
     const data = await this.ensureData();
     return data.temperature;
@@ -305,5 +307,172 @@ export class SwitchBot {
     const data = await this.ensureData();
     return data.co2;
   }
+
+  // ---------------------------------------------------------------------------
+
+  public async getHistory(limit: number, offset: number = 0): Promise<SensorDataRecord[]> {
+    if (!this.store) return [];
+
+    try {
+      // 1. 找出所有已知的月份索引，並由新到舊排序 (YYYYMM 字典序即時間序)
+      const prefix = `_m:deviceId:${this.deviceId}:`;
+      const listResult = await this.store.list({ prefix });
+      const sortedMonthKeys = listResult.keys
+        .map(k => k.name)
+        .sort((a, b) => b.localeCompare(a)); 
+      
+      const results: SensorDataRecord[] = [];
+      let skipped = 0;
+
+      // 2. 逐月讀取，直到達到 limit 筆數即停止，節省 KV GET
+      for (const key of sortedMonthKeys) {
+        const scope = key.replace('_m:', '');
+        const data = await this.store.scopedData(scope);
+        if (!data) continue;
+
+        // 將該月資料按時間由新到舊排序
+        const monthRecords = Object.values(data).sort((a, b) => (b.lastchange || 0) - (a.lastchange || 0));
+
+        for (const record of monthRecords) {
+          // 處理偏移量 (offset)
+          if (skipped < offset) {
+            skipped++;
+            continue;
+          }
+
+          results.push(record);
+
+          // 達到筆數上限，立即回傳
+          if (results.length >= limit) {
+            return results;
+          }
+        }
+      }
+
+      return results;
+    } catch (err) {
+      console.error(`[SwitchBot] getHistory error for ${this.name}:`, err);
+      return [];
+    }
+  }
+
+  public async getHistoryAll(): Promise<SensorDataRecord[]> {
+    if (!this.store) return [];
+
+    try {
+      // 1. 找出所有已知的月份索引 (利用 _m: 前綴)
+      const prefix = `_m:deviceId:${this.deviceId}:`;
+      const listResult = await this.store.list({ prefix });
+      
+      const results: SensorDataRecord[] = [];
+      // 2. 對每個月份呼叫一次 scopedData 取得整個月的資料 (有效減少 KV GET 次數)
+      for (const key of listResult.keys) {
+        const scope = key.name.replace('_m:', '');
+        const data = await this.store.scopedData(scope);
+        if (data) {
+          results.push(...Object.values(data));
+        }
+      }
+      
+      // 按時間排序 (由新到舊)
+      return results.sort((a, b) => (b.lastchange || 0) - (a.lastchange || 0));
+    } catch (err) {
+      console.error(`[SwitchBot] getHistoryAll error for ${this.name}:`, err);
+      return [];
+    }
+  }
+
+  public async getHistoryByTimestamp(min: number, max?: number): Promise<SensorDataRecord[]> {
+    if (!this.store) return [];
+
+    try {
+      // 正規化為秒數，並確保範圍正確
+      const normalize = (ts: number) => (ts > 100000000000 ? Math.floor(ts / 1000) : ts);
+      const start = normalize(min);
+      const end = max !== undefined ? normalize(max) : Math.floor(Date.now() / 1000);
+
+      const realStart = Math.min(start, end);
+      const realEnd = Math.max(start, end);
+
+      // 1. 計算範圍內涵蓋的月份
+      const months = this.getMonthsInRange(realStart, realEnd);
+      
+      const results: SensorDataRecord[] = [];
+      // 2. 只抓取相關月份的資料
+      for (const monthStr of months) {
+        const scope = `deviceId:${this.deviceId}:${monthStr}`;
+        const data = await this.store.scopedData(scope);
+        if (data) {
+          for (const record of Object.values(data)) {
+            const ts = record.lastchange || 0;
+            if (ts >= realStart && ts <= realEnd) {
+              results.push(record);
+            }
+          }
+        }
+      }
+
+      return results.sort((a, b) => (b.lastchange || 0) - (a.lastchange || 0));
+    } catch (err) {
+      console.error(`[SwitchBot] getHistoryByTimestamp error for ${this.name}:`, err);
+      return [];
+    }
+  }
+
+  public async getHistoryByHours(limit_hours: number, offset_hours: number = 0): Promise<SensorDataRecord[]> {
+    const now = Math.floor(Date.now() / 1000);
+    const max = now - (offset_hours * 3600);
+    const min = max - (limit_hours * 3600);
+    return this.getHistoryByTimestamp(min, max);
+  }
+
+  public async getHistoryByDays(limit_days: number, offset_days: number = 0): Promise<SensorDataRecord[]> {
+    const now = Math.floor(Date.now() / 1000);
+    const max = now - (offset_days * 86400);
+    const min = max - (limit_days * 86400);
+    return this.getHistoryByTimestamp(min, max);
+  }
+
+  public async getHistoryByMonths(limit_months: number, offset_months: number = 0): Promise<SensorDataRecord[]> {
+    const now = new Date();
+    
+    // 計算結束時間 (offset 個月前)
+    const maxDate = new Date(now);
+    maxDate.setMonth(now.getMonth() - offset_months);
+    
+    // 計算開始時間 (offset + limit 個月前)
+    const minDate = new Date(maxDate);
+    minDate.setMonth(maxDate.getMonth() - limit_months);
+    
+    return this.getHistoryByTimestamp(
+      Math.floor(minDate.getTime() / 1000),
+      Math.floor(maxDate.getTime() / 1000)
+    );
+  }
+
+  private getMonthsInRange(start: number, end: number): string[] {
+    const months: string[] = [];
+    let current = new Date(start * 1000);
+    const last = new Date(end * 1000);
+
+    // 調整到月初，避免月份加減時因為日期(如31日)產生的跳越問題
+    current.setDate(1);
+    current.setHours(0, 0, 0, 0);
+
+    while (current <= last) {
+      const yyyymm = current.toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
+      months.push(yyyymm);
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    // 確保最後一個月份有被包含 (雖然 loop 通常已處理，但防呆)
+    const lastYm = last.toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
+    if (!months.includes(lastYm)) {
+      months.push(lastYm);
+    }
+
+    return months;
+  }
+
 }
 

@@ -135,6 +135,63 @@ app.get('/devices/:id', async (c) => {
   }
 });
 
+app.get('/devices/:id/history', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const sensors = getSensors(c);
+    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    if (!sensor) return c.json({ error: 'Device not found' }, 404);
+
+    const query = c.req.query();
+    let results: SensorDataRecord[] = [];
+    
+    // 1. Timestamp 優先 (min_ts, max_ts)
+    if (query.min_ts) {
+      const min = parseInt(query.min_ts);
+      const max = query.max_ts ? parseInt(query.max_ts) : undefined;
+      results = await sensor.getHistoryByTimestamp(min, max);
+    }
+    // 2. 相對時間 (Days: limit_days, offset_days)
+    else if (query.limit_days) {
+      const limit = parseInt(query.limit_days);
+      const offset = query.offset_days ? parseInt(query.offset_days) : 0;
+      results = await sensor.getHistoryByDays(limit, offset);
+    }
+    // 3. 相對時間 (Months: limit_months, offset_months)
+    else if (query.limit_months) {
+      const limit = parseInt(query.limit_months);
+      const offset = query.offset_months ? parseInt(query.offset_months) : 0;
+      results = await sensor.getHistoryByMonths(limit, offset);
+    }
+    // 4. 相對時間 (Hours: limit_hours, offset_hours)
+    else if (query.limit_hours) {
+      const limit = parseInt(query.limit_hours);
+      const offset = query.offset_hours ? parseInt(query.offset_hours) : 0;
+      results = await sensor.getHistoryByHours(limit, offset);
+    }
+    // 預設回傳最近的歷史紀錄 (按 limit/offset 優化讀取)
+    else {
+      const limit = query.limit ? parseInt(query.limit) : 100;
+      const offset = query.offset ? parseInt(query.offset) : 0;
+      results = await sensor.getHistory(limit, offset);
+      return c.json(results); // 已在內部優化，直接回傳
+    }
+
+    // 基礎分頁支援 (針對有時間範圍篩選後的結果進行切片)
+    if (query.limit || query.offset) {
+      const limit = query.limit ? parseInt(query.limit) : results.length;
+      const offset = query.offset ? parseInt(query.offset) : 0;
+      results = results.slice(offset, offset + limit);
+    }
+
+    return c.json(results);
+  } catch (error) {
+    console.error(`[Error] GET /devices/${c.req.param('id')}/history:`, error);
+    return c.text('無法抓取歷史資訊，請稍後再試。', 500);
+  }
+});
+
+
 // SwitchBot Webhook 接收端點
 app.post('/switch-bot', async (c) => {
   try {
