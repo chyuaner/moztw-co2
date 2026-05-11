@@ -65,7 +65,7 @@ async function main(): Promise<void> {
             const parts = k.name.split(':');
             const scope = parts.slice(1, -1).join(':');
             const key = parts[parts.length - 1];
-            await localStore.scopedPut(scope, key, val);
+            await localStore.scopedPut(scope, key, val, { skipMeta: true });
           } else {
             await localStore.put(k.name, val);
           }

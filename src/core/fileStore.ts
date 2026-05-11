@@ -66,17 +66,19 @@ export class FileStore<T = any> implements IStore<T> {
     return null;
   }
 
-  async scopedPut(scope: string, key: string, value: T): Promise<void> {
+  async scopedPut(scope: string, key: string, value: T, options?: { skipMeta?: boolean }): Promise<void> {
     await this.ensureDir();
     const scopePath = path.join(this.folderPath, `${scope}.jsonl`);
     const entry = { k: key, v: value };
     // 使用 appendFile 進行原子追加，避免同時寫入衝突
     await fs.appendFile(scopePath, JSON.stringify(entry) + '\n', 'utf-8');
 
+    if (options?.skipMeta) return;
+
     // 自動維護 Metadata 索引 (儲存於主資料檔案 data.json 中)
     const metaKey = `_m:${scope}`;
-    const metaData = await this.get(metaKey) as string[] | null;
-    const updatedMeta = metaData ? [...metaData] : [];
+    const metaData = await this.get(metaKey);
+    let updatedMeta: string[] = Array.isArray(metaData) ? metaData : [];
     if (!updatedMeta.includes(key)) {
       updatedMeta.push(key);
       await this.put(metaKey, updatedMeta as any);

@@ -10,7 +10,7 @@ export interface IStore<T = any> {
   /**
    * 儲存資料到特定範圍 (對應 Node 模式的獨立檔案或 KV 的 Prefix)
    */
-  scopedPut(scope: string, key: string, value: T): Promise<void>;
+  scopedPut(scope: string, key: string, value: T, options?: { skipMeta?: boolean }): Promise<void>;
   /**
    * 列出所有符合前綴的 Key (僅限非 Scoped 的主資料)
    */
@@ -65,10 +65,13 @@ export class KVStore<T = any> implements IStore<T> {
     return data as T | null;
   }
 
-  async scopedPut(scope: string, key: string, value: T): Promise<void> {
+  async scopedPut(scope: string, key: string, value: T, options?: { skipMeta?: boolean }): Promise<void> {
     if (!this.kv) return;
     const fullKey = `${this.SCOPE_PREFIX}${scope}:${key}`;
     await this.kv.put(fullKey, JSON.stringify(value));
+
+    // 如果指定跳過，就不更新 Metadata 索引 (用於匯出/匯入等純資料搬移場景)
+    if (options?.skipMeta) return;
 
     // 自動維護 Metadata 索引
     try {
@@ -219,9 +222,11 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     return this.get(fullKey);
   }
 
-  async scopedPut(scope: string, key: string, value: T): Promise<void> {
+  async scopedPut(scope: string, key: string, value: T, options?: { skipMeta?: boolean }): Promise<void> {
     const fullKey = `${this.SCOPE_PREFIX}${scope}:${key}`;
     await this.put(fullKey, value);
+
+    if (options?.skipMeta) return;
 
     // 自動維護 Metadata 索引
     const metaKey = `${this.META_PREFIX}${scope}`;
