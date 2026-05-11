@@ -3,6 +3,7 @@ import { env } from 'hono/adapter';
 import { webhookCallback } from 'grammy';
 import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
 import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
+import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
 
 export type Variables = {
@@ -36,58 +37,26 @@ const getSensors = (c: any) => {
   }
 };
 
-// 依照 SpaceAPI Schema 轉換 Sensor 格式的輔助函式
-const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SensorDataRecord }[]) => {
-  const now = Math.floor(Date.now() / 1000);
-
-  const temperature = dataList
-    .filter((item) => typeof item.data.temperature === 'number')
-    .map((item) => ({
-      value: item.data.temperature as number,
-      unit: '°C',
-      location: item.sensor.id,
-      name: item.sensor.name,
-      lastchange: item.data.temperature_lastchange || item.data.lastchange || now,
-    }));
-
-  const humidity = dataList
-    .filter((item) => typeof item.data.humidity === 'number')
-    .map((item) => ({
-      value: item.data.humidity as number,
-      unit: '%',
-      location: item.sensor.id,
-      name: item.sensor.name,
-      lastchange: item.data.humidity_lastchange || item.data.lastchange || now,
-    }));
-
-  const carbondioxide = dataList
-    .filter((item) => typeof item.data.co2 === 'number')
-    .map((item) => ({
-      value: item.data.co2 as number,
-      unit: 'ppm',
-      location: item.sensor.id,
-      name: item.sensor.name,
-      lastchange: item.data.co2_lastchange || item.data.lastchange || now,
-    }));
-
-  return {
-    temperature,
-    humidity,
-    carbondioxide,
-  };
-};
 
 // 取得所有感測器資料的輔助函式
 const getSpaceApiAllSensors = async (c: any) => {
   const sensors = getSensors(c);
-  const dataList = await Promise.all(
-    sensors.map(async (s) => {
-      const d = await s.getAll();
-      return { sensor: s, data: d };
-    })
-  );
+  const result: any = {
+    temperature: [],
+    humidity: [],
+    carbondioxide: [],
+  };
 
-  return formatSpaceApi(dataList);
+  for (const s of sensors) {
+    const data = await s.getAll();
+    const formatted = formatSpaceApi(s.id, s.name, data);
+
+    if (formatted.temperature) result.temperature.push(formatted.temperature);
+    if (formatted.humidity) result.humidity.push(formatted.humidity);
+    if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+  }
+
+  return result;
 };
 
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
@@ -120,7 +89,17 @@ app.get('/sensors/:id', async (c) => {
       return c.json({ error: 'Sensor not found' }, 404);
     }
     const data = await sensor.getAll();
-    return c.json(formatSpaceApi([{ sensor, data }]));
+    const formatted = formatSpaceApi(sensor.id, sensor.name, data);
+    const result: any = {
+      temperature: [],
+      humidity: [],
+      carbondioxide: [],
+    };
+    if (formatted.temperature) result.temperature.push(formatted.temperature);
+    if (formatted.humidity) result.humidity.push(formatted.humidity);
+    if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+
+    return c.json(result);
   } catch (error) {
     console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
     return c.text('無法抓取空間資訊，請稍後再試。', 500);
