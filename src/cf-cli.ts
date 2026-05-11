@@ -119,8 +119,7 @@ async function main(): Promise<void> {
         const scopes = Object.keys(scopeGroups);
         console.log(`${colors.cyan}找到 ${scopes.length} 個 Scope，開始更新索引...${colors.reset}`);
         for (const s of scopes) {
-          const metaKey = `_m:${s}`;
-          await remoteStore.put(metaKey, scopeGroups[s]);
+          await remoteStore.scopedMetaRefresh(s);
           console.log(`  [${s}] 更新完成 (${scopeGroups[s].length} 筆資料)`);
         }
         console.log(`${colors.green}全量 Metadata 索引重刷完成！${colors.reset}`);

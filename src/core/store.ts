@@ -36,7 +36,11 @@ export interface IStore<T = any> {
     cursor?: string;
   }>;
   /**
-   * 重新整理特定範圍內的 Metadata 索引 (會真正調用 list())
+   * 取得特定範圍內的所有資料 (用於圖表等需要大量資料的場景，僅需一次 GET)
+   */
+  scopedData(scope: string): Promise<Record<string, T> | null>;
+  /**
+   * 重新整理特定範圍內的 Metadata 索引 (會真正調用 list() 與 get())
    */
   scopedMetaRefresh(scope: string): Promise<void>;
 }
@@ -73,17 +77,27 @@ export class KVStore<T = any> implements IStore<T> {
     // 如果指定跳過，就不更新 Metadata 索引 (用於匯出/匯入等純資料搬移場景)
     if (options?.skipMeta) return;
 
-    // 自動維護 Metadata 索引
+    // 自動維護 Metadata 索引 (現在直接包含原始資料以利圖表功能)
     try {
       const metaKey = `${this.META_PREFIX}${scope}`;
       const metaData = await this.get(metaKey);
-      let updatedMeta: string[] = Array.isArray(metaData) ? metaData : [];
       
-      if (!updatedMeta.includes(key)) {
-        updatedMeta.push(key);
-        await this.put(metaKey, updatedMeta as any);
-        console.log(`[Store] Updated metadata index for ${scope}, new size: ${updatedMeta.length}`);
+      let updatedMeta: Record<string, T>;
+      if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+        updatedMeta = metaData as Record<string, T>;
+      } else {
+        // 相容舊格式：如果是陣列或不存在，嘗試轉換或初始化
+        updatedMeta = {};
+        if (Array.isArray(metaData)) {
+          // 如果是舊的 Key 陣列，我們暫時無法補齊舊資料，
+          // 但我們可以把舊的 Key 記下來 (值設為 null 或保持空)，
+          // 這裡選擇直接開始累積新的物件格式
+        }
       }
+      
+      updatedMeta[key] = value;
+      await this.put(metaKey, updatedMeta as any);
+      console.log(`[Store] Updated metadata index (with data) for ${scope}, new size: ${Object.keys(updatedMeta).length}`);
     } catch (err) {
       console.error(`[Store Error] Failed to update metadata index for ${scope}:`, err);
     }
@@ -118,17 +132,35 @@ export class KVStore<T = any> implements IStore<T> {
     if (!this.kv) return { keys: [], list_complete: true };
 
     const metaKey = `${this.META_PREFIX}${scope}`;
-    const metaData = await this.get(metaKey) as string[] | null;
+    const metaData = await this.get(metaKey);
 
-    if (metaData && Array.isArray(metaData)) {
-      return {
-        keys: metaData.map(name => ({ name })),
-        list_complete: true,
-      };
+    if (metaData) {
+      if (Array.isArray(metaData)) {
+        return {
+          keys: metaData.map(name => ({ name })),
+          list_complete: true,
+        };
+      } else if (typeof metaData === 'object') {
+        return {
+          keys: Object.keys(metaData).map(name => ({ name })),
+          list_complete: true,
+        };
+      }
     }
 
     // 如果沒有 Metadata，則退而求其次使用 KV list
     return this.scopedKvList(scope, options);
+  }
+
+  async scopedData(scope: string): Promise<Record<string, T> | null> {
+    if (!this.kv) return null;
+    const metaKey = `${this.META_PREFIX}${scope}`;
+    const metaData = await this.get(metaKey);
+    
+    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+      return metaData as Record<string, T>;
+    }
+    return null;
   }
 
   async scopedKvList(scope: string, options?: { limit?: number; cursor?: string }): Promise<{
@@ -153,20 +185,23 @@ export class KVStore<T = any> implements IStore<T> {
 
   async scopedMetaRefresh(scope: string): Promise<void> {
     if (!this.kv) return;
-    const allKeys: string[] = [];
+    const allData: Record<string, T> = {};
     let cursor: string | undefined;
     let listComplete = false;
 
     while (!listComplete) {
       const result = await this.scopedKvList(scope, { cursor, limit: 1000 });
-      allKeys.push(...result.keys.map(k => k.name));
+      for (const k of result.keys) {
+        const val = await this.scopedGet(scope, k.name);
+        if (val) allData[k.name] = val;
+      }
       cursor = result.cursor;
       listComplete = result.list_complete;
       if (!cursor) break;
     }
 
     const metaKey = `${this.META_PREFIX}${scope}`;
-    await this.put(metaKey, allKeys as any);
+    await this.put(metaKey, allData as any);
   }
 }
 
@@ -228,14 +263,19 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
 
     if (options?.skipMeta) return;
 
-    // 自動維護 Metadata 索引
+    // 自動維護 Metadata 索引 (現在直接包含原始資料以利圖表功能)
     const metaKey = `${this.META_PREFIX}${scope}`;
-    const metaData = await this.get(metaKey) as string[] | null;
-    const updatedMeta = metaData ? [...metaData] : [];
-    if (!updatedMeta.includes(key)) {
-      updatedMeta.push(key);
-      await this.put(metaKey, updatedMeta as any);
+    const metaData = await this.get(metaKey);
+    
+    let updatedMeta: Record<string, T>;
+    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+      updatedMeta = metaData as Record<string, T>;
+    } else {
+      updatedMeta = {};
     }
+    
+    updatedMeta[key] = value;
+    await this.put(metaKey, updatedMeta as any);
   }
 
   async list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{
@@ -272,16 +312,33 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     cursor?: string;
   }> {
     const metaKey = `${this.META_PREFIX}${scope}`;
-    const metaData = await this.get(metaKey) as string[] | null;
+    const metaData = await this.get(metaKey);
 
-    if (metaData && Array.isArray(metaData)) {
-      return {
-        keys: metaData.map(name => ({ name })),
-        list_complete: true,
-      };
+    if (metaData) {
+      if (Array.isArray(metaData)) {
+        return {
+          keys: metaData.map(name => ({ name })),
+          list_complete: true,
+        };
+      } else if (typeof metaData === 'object') {
+        return {
+          keys: Object.keys(metaData).map(name => ({ name })),
+          list_complete: true,
+        };
+      }
     }
 
     return this.scopedKvList(scope, options);
+  }
+
+  async scopedData(scope: string): Promise<Record<string, T> | null> {
+    const metaKey = `${this.META_PREFIX}${scope}`;
+    const metaData = await this.get(metaKey);
+    
+    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+      return metaData as Record<string, T>;
+    }
+    return null;
   }
 
   async scopedKvList(scope: string, options?: { limit?: number; cursor?: string }): Promise<{
@@ -302,20 +359,23 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
   }
 
   async scopedMetaRefresh(scope: string): Promise<void> {
-    const allKeys: string[] = [];
+    const allData: Record<string, T> = {};
     let cursor: string | undefined;
     let listComplete = false;
 
     while (!listComplete) {
       const result = await this.scopedKvList(scope, { cursor, limit: 1000 });
-      allKeys.push(...result.keys.map(k => k.name));
+      for (const k of result.keys) {
+        const val = await this.scopedGet(scope, k.name);
+        if (val) allData[k.name] = val;
+      }
       cursor = result.cursor;
       listComplete = result.list_complete;
       if (!cursor) break;
     }
 
     const metaKey = `${this.META_PREFIX}${scope}`;
-    await this.put(metaKey, allKeys as any);
+    await this.put(metaKey, allData as any);
   }
 }
 

@@ -75,14 +75,19 @@ export class FileStore<T = any> implements IStore<T> {
 
     if (options?.skipMeta) return;
 
-    // 自動維護 Metadata 索引 (儲存於主資料檔案 data.json 中)
+    // 自動維護 Metadata 索引 (現在直接包含原始資料以利圖表功能)
     const metaKey = `_m:${scope}`;
     const metaData = await this.get(metaKey);
-    let updatedMeta: string[] = Array.isArray(metaData) ? metaData : [];
-    if (!updatedMeta.includes(key)) {
-      updatedMeta.push(key);
-      await this.put(metaKey, updatedMeta as any);
+    
+    let updatedMeta: Record<string, T>;
+    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+      updatedMeta = metaData as Record<string, T>;
+    } else {
+      updatedMeta = {};
     }
+    
+    updatedMeta[key] = value;
+    await this.put(metaKey, updatedMeta as any);
   }
 
   async list(options: { prefix?: string; limit?: number; cursor?: string } = {}): Promise<{
@@ -130,17 +135,34 @@ export class FileStore<T = any> implements IStore<T> {
     cursor?: string;
   }> {
     const metaKey = `_m:${scope}`;
-    const metaData = await this.get(metaKey) as string[] | null;
+    const metaData = await this.get(metaKey);
 
-    if (metaData && Array.isArray(metaData)) {
-      return {
-        keys: metaData.map(name => ({ name })),
-        list_complete: true,
-      };
+    if (metaData) {
+      if (Array.isArray(metaData)) {
+        return {
+          keys: metaData.map(name => ({ name })),
+          list_complete: true,
+        };
+      } else if (typeof metaData === 'object') {
+        return {
+          keys: Object.keys(metaData).map(name => ({ name })),
+          list_complete: true,
+        };
+      }
     }
 
     // 如果沒有 Metadata，則使用原本的掃描邏輯
     return this.scopedKvList(scope, options);
+  }
+
+  async scopedData(scope: string): Promise<Record<string, T> | null> {
+    const metaKey = `_m:${scope}`;
+    const metaData = await this.get(metaKey);
+    
+    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+      return metaData as Record<string, T>;
+    }
+    return null;
   }
 
   async scopedKvList(scope: string, options: { limit?: number; cursor?: string } = {}): Promise<{
@@ -189,20 +211,23 @@ export class FileStore<T = any> implements IStore<T> {
   }
 
   async scopedMetaRefresh(scope: string): Promise<void> {
-    const allKeys: string[] = [];
+    const allData: Record<string, T> = {};
     let cursor: string | undefined;
     let listComplete = false;
 
     while (!listComplete) {
       const result = await this.scopedKvList(scope, { cursor, limit: 1000 });
-      allKeys.push(...result.keys.map(k => k.name));
+      for (const k of result.keys) {
+        const val = await this.scopedGet(scope, k.name);
+        if (val) allData[k.name] = val;
+      }
       cursor = result.cursor;
       listComplete = result.list_complete;
       if (!cursor) break;
     }
 
     const metaKey = `_m:${scope}`;
-    await this.put(metaKey, allKeys as any);
+    await this.put(metaKey, allData as any);
   }
 }
 
