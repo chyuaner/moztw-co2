@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { env } from 'hono/adapter';
 import { webhookCallback } from 'grammy';
 import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
-import { SwitchBot, SensorConfig } from './switchBot.js';
+import { SwitchBot, SensorConfig, SwitchBotData } from './switchBot.js';
 import { IStore } from './store.js';
 
 export type Variables = {
@@ -36,8 +36,49 @@ const getSensors = (c: any) => {
   }
 };
 
+// 依照 SpaceAPI Schema 轉換 Sensor 格式的輔助函式
+const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SwitchBotData }[]) => {
+  const now = Math.floor(Date.now() / 1000);
+
+  const temperature = dataList
+    .filter((item) => typeof item.data.temperature === 'number')
+    .map((item) => ({
+      value: item.data.temperature as number,
+      unit: '°C',
+      location: item.sensor.id,
+      name: item.sensor.name,
+      lastchange: item.sensor.temperature_lastchange || item.sensor.lastchange || now,
+    }));
+
+  const humidity = dataList
+    .filter((item) => typeof item.data.humidity === 'number')
+    .map((item) => ({
+      value: item.data.humidity as number,
+      unit: '%',
+      location: item.sensor.id,
+      name: item.sensor.name,
+      lastchange: item.sensor.humidity_lastchange || item.sensor.lastchange || now,
+    }));
+
+  const carbondioxide = dataList
+    .filter((item) => typeof item.data.co2 === 'number')
+    .map((item) => ({
+      value: item.data.co2 as number,
+      unit: 'ppm',
+      location: item.sensor.id,
+      name: item.sensor.name,
+      lastchange: item.sensor.co2_lastchange || item.sensor.lastchange || now,
+    }));
+
+  return {
+    temperature,
+    humidity,
+    carbondioxide,
+  };
+};
+
 // 取得所有感測器資料的輔助函式
-const getSpaceApiSensors = async (c: any) => {
+const getSpaceApiAllSensors = async (c: any) => {
   const sensors = getSensors(c);
   const dataList = await Promise.all(
     sensors.map(async (s) => {
@@ -46,51 +87,13 @@ const getSpaceApiSensors = async (c: any) => {
     })
   );
 
-  // 依照 SpaceAPI Schema 轉換 Sensor 格式
-  const now = Math.floor(Date.now() / 1000);
-
-  const temperature = dataList
-    .filter(item => typeof item.data.temperature === 'number')
-    .map(item => ({
-      value: item.data.temperature,
-      unit: '°C',
-      location: item.sensor.id,
-      // name: item.sensor.name,
-      lastchange: item.sensor.lastchange || now
-    }));
-
-  const humidity = dataList
-    .filter(item => typeof item.data.humidity === 'number')
-    .map(item => ({
-      value: item.data.humidity,
-      unit: '%',
-      location: item.sensor.id,
-      // name: item.sensor.name,
-      lastchange: item.sensor.lastchange || now
-    }));
-
-  const carbondioxide = dataList
-    .filter(item => typeof item.data.co2 === 'number')
-    .map(item => ({
-      value: item.data.co2,
-      unit: 'ppm',
-      location: item.sensor.id,
-      // name: item.sensor.name,
-      lastchange: item.sensor.lastchange || now
-    }));
-
-  // 只回傳 sensors 區段的內容
-  return {
-    temperature,
-    humidity,
-    carbondioxide
-  };
+  return formatSpaceApi(dataList);
 };
 
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
 app.get('/', async (c) => {
   try {
-    const data = await getSpaceApiSensors(c);
+    const data = await getSpaceApiAllSensors(c);
     return c.json(data);
   } catch (error) {
     console.error(`[Error] GET /:`, error);
@@ -100,10 +103,26 @@ app.get('/', async (c) => {
 
 app.get('/sensors', async (c) => {
   try {
-    const data = await getSpaceApiSensors(c);
+    const data = await getSpaceApiAllSensors(c);
     return c.json(data);
   } catch (error) {
     console.error(`[Error] GET /sensors:`, error);
+    return c.text('無法抓取空間資訊，請稍後再試。', 500);
+  }
+});
+
+app.get('/sensors/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const sensors = getSensors(c);
+    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    if (!sensor) {
+      return c.json({ error: 'Sensor not found' }, 404);
+    }
+    const data = await sensor.getAll();
+    return c.json(formatSpaceApi([{ sensor, data }]));
+  } catch (error) {
+    console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
     return c.text('無法抓取空間資訊，請稍後再試。', 500);
   }
 });
