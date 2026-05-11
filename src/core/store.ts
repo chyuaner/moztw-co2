@@ -7,8 +7,6 @@ export interface IStore<T = any> {
   scopedGet(scope: string, key: string): Promise<T | null>;
   /**
    * 儲存資料到特定範圍 (對應 Node 模式的獨立檔案或 KV 的 Prefix)
-  /**
-   * 儲存資料到特定範圍 (對應 Node 模式的獨立檔案或 KV 的 Prefix)
    */
   scopedPut(scope: string, key: string, value: T, options?: { skipMeta?: boolean }): Promise<void>;
   /**
@@ -83,16 +81,10 @@ export class KVStore<T = any> implements IStore<T> {
       const metaData = await this.get(metaKey);
       
       let updatedMeta: Record<string, T>;
-      if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+      if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
         updatedMeta = metaData as Record<string, T>;
       } else {
-        // 相容舊格式：如果是陣列或不存在，嘗試轉換或初始化
         updatedMeta = {};
-        if (Array.isArray(metaData)) {
-          // 如果是舊的 Key 陣列，我們暫時無法補齊舊資料，
-          // 但我們可以把舊的 Key 記下來 (值設為 null 或保持空)，
-          // 這裡選擇直接開始累積新的物件格式
-        }
       }
       
       updatedMeta[key] = value;
@@ -134,18 +126,11 @@ export class KVStore<T = any> implements IStore<T> {
     const metaKey = `${this.META_PREFIX}${scope}`;
     const metaData = await this.get(metaKey);
 
-    if (metaData) {
-      if (Array.isArray(metaData)) {
-        return {
-          keys: metaData.map(name => ({ name })),
-          list_complete: true,
-        };
-      } else if (typeof metaData === 'object') {
-        return {
-          keys: Object.keys(metaData).map(name => ({ name })),
-          list_complete: true,
-        };
-      }
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
+      return {
+        keys: Object.keys(metaData).map(name => ({ name })),
+        list_complete: true,
+      };
     }
 
     // 如果沒有 Metadata，則退而求其次使用 KV list
@@ -157,7 +142,7 @@ export class KVStore<T = any> implements IStore<T> {
     const metaKey = `${this.META_PREFIX}${scope}`;
     const metaData = await this.get(metaKey);
     
-    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       return metaData as Record<string, T>;
     }
     return null;
@@ -268,7 +253,7 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     const metaData = await this.get(metaKey);
     
     let updatedMeta: Record<string, T>;
-    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       updatedMeta = metaData as Record<string, T>;
     } else {
       updatedMeta = {};
@@ -314,18 +299,11 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     const metaKey = `${this.META_PREFIX}${scope}`;
     const metaData = await this.get(metaKey);
 
-    if (metaData) {
-      if (Array.isArray(metaData)) {
-        return {
-          keys: metaData.map(name => ({ name })),
-          list_complete: true,
-        };
-      } else if (typeof metaData === 'object') {
-        return {
-          keys: Object.keys(metaData).map(name => ({ name })),
-          list_complete: true,
-        };
-      }
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
+      return {
+        keys: Object.keys(metaData).map(name => ({ name })),
+        list_complete: true,
+      };
     }
 
     return this.scopedKvList(scope, options);
@@ -335,7 +313,7 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     const metaKey = `${this.META_PREFIX}${scope}`;
     const metaData = await this.get(metaKey);
     
-    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       return metaData as Record<string, T>;
     }
     return null;
@@ -378,8 +356,3 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     await this.put(metaKey, allData as any);
   }
 }
-
-
-
-
-

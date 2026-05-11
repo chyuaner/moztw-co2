@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { IStore, SensorDataRecord } from './store.js';
+import { IStore } from './store.js';
 
 export class FileStore<T = any> implements IStore<T> {
   private fileName = 'data.json';
@@ -80,7 +80,7 @@ export class FileStore<T = any> implements IStore<T> {
     const metaData = await this.get(metaKey);
     
     let updatedMeta: Record<string, T>;
-    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       updatedMeta = metaData as Record<string, T>;
     } else {
       updatedMeta = {};
@@ -137,18 +137,11 @@ export class FileStore<T = any> implements IStore<T> {
     const metaKey = `_m:${scope}`;
     const metaData = await this.get(metaKey);
 
-    if (metaData) {
-      if (Array.isArray(metaData)) {
-        return {
-          keys: metaData.map(name => ({ name })),
-          list_complete: true,
-        };
-      } else if (typeof metaData === 'object') {
-        return {
-          keys: Object.keys(metaData).map(name => ({ name })),
-          list_complete: true,
-        };
-      }
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
+      return {
+        keys: Object.keys(metaData).map(name => ({ name })),
+        list_complete: true,
+      };
     }
 
     // 如果沒有 Metadata，則使用原本的掃描邏輯
@@ -159,7 +152,7 @@ export class FileStore<T = any> implements IStore<T> {
     const metaKey = `_m:${scope}`;
     const metaData = await this.get(metaKey);
     
-    if (metaData && !Array.isArray(metaData) && typeof metaData === 'object') {
+    if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       return metaData as Record<string, T>;
     }
     return null;
@@ -230,10 +223,3 @@ export class FileStore<T = any> implements IStore<T> {
     await this.put(metaKey, allData as any);
   }
 }
-
-
-
-
-
-
-
