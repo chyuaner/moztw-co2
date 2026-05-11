@@ -140,37 +140,47 @@ export class SwitchBot {
       lastchange: this.lastchange,
     };
 
-    // 1. 更新當前狀態 (用於 API/Bot 快速查詢)
-    // 只有在數值有變動，或者距離上次同步超過一定時間（例如一小時）才強制寫入 KV 節省次數
-    const isDataChanged = 
-      (newData.temperature !== undefined && prev?.temperature !== updatedTemperature) ||
-      (newData.humidity !== undefined && prev?.humidity !== updatedHumidity) ||
-      (newData.co2 !== undefined && prev?.co2 !== updatedCo2);
+    // 嚴格比對函數：強制轉換為 Number 再比對，並加入偵錯日誌
+    const safeNum = (val: any) => (val === undefined || val === null) ? undefined : Number(val);
+    const hasChanged = (oldVal: any, newVal: any) => {
+      if (newVal === undefined) return false;
+      if (oldVal === undefined || oldVal === null) return true;
+      return safeNum(oldVal) !== safeNum(newVal);
+    };
 
+    const isDataChanged = 
+      hasChanged(prev?.temperature, updatedTemperature) ||
+      hasChanged(prev?.humidity, updatedHumidity) ||
+      hasChanged(prev?.co2, updatedCo2);
+
+    // 1. 寫入原始資料 (Raw Ingestion) - 先寫入歷史紀錄，成功後才更新當前狀態
+    if (isDataChanged) {
+      console.log(`[SwitchBot] ${this.name} 偵測到變動，準備寫入歷史紀錄:`);
+      console.log(`  - 舊值: T:${prev?.temperature}, H:${prev?.humidity}, C:${prev?.co2}`);
+      console.log(`  - 新值: T:${updatedTemperature}, H:${updatedHumidity}, C:${updatedCo2}`);
+
+      try {
+        const timestampMs = this.lastchange ? this.lastchange * 1000 : Date.now();
+        const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
+        const scope = `deviceId:${this.deviceId}:${dateStr}`;
+        const timestampStr = `${timestampMs}`;
+        
+        if (this.store) {
+          await this.store.scopedPut(scope, timestampStr, savedata);
+          console.log(`[Store] ${this.name} 歷史紀錄寫入成功 (${timestampStr})`);
+        }
+      } catch (err) {
+        console.error(`[Store Error] ${this.name} 歷史紀錄寫入失敗，取消更新當前狀態以利下次重試:`, err);
+        return; // 歷史寫入失敗則中斷，不更新主紀錄
+      }
+    }
+
+    // 2. 更新當前狀態 (用於 API/Bot 快速查詢)
     try {
       await this.store.put(recordKey, savedata);
       this.data = savedata; // 更新記憶體緩存
     } catch (err) {
       console.error('[Store Error] Failed to update current record:', err);
-    }
-
-    // 2. 寫入原始資料 (Raw Ingestion)
-    // 如果數值完全沒變，就跳過歷史紀錄寫入，節省 KV PUT 額度
-    if (!isDataChanged) {
-      return;
-    }
-
-    try {
-      const timestampMs = this.lastchange ? this.lastchange * 1000 : Date.now();
-      const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6); // YYYYMM (按月分桶)
-      const scope = `deviceId:${this.deviceId}:${dateStr}`;
-      const timestampStr = `${timestampMs}`;
-      
-      if (this.store) {
-        await this.store.scopedPut(scope, timestampStr, savedata);
-      }
-    } catch (err) {
-      console.error('[Store Error] Failed to write raw ingestion record:', err);
     }
   }
 
