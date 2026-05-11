@@ -35,6 +35,10 @@ export interface IStore<T = any> {
     list_complete: boolean;
     cursor?: string;
   }>;
+  /**
+   * 重新整理特定範圍內的 Metadata 索引 (會真正調用 list())
+   */
+  scopedMetaRefresh(scope: string): Promise<void>;
 }
 
 export class KVStore<T = any> implements IStore<T> {
@@ -136,6 +140,24 @@ export class KVStore<T = any> implements IStore<T> {
       list_complete: result.list_complete,
       cursor: result.cursor,
     };
+  }
+
+  async scopedMetaRefresh(scope: string): Promise<void> {
+    if (!this.kv) return;
+    const allKeys: string[] = [];
+    let cursor: string | undefined;
+    let listComplete = false;
+
+    while (!listComplete) {
+      const result = await this.scopedKvList(scope, { cursor, limit: 1000 });
+      allKeys.push(...result.keys.map(k => k.name));
+      cursor = result.cursor;
+      listComplete = result.list_complete;
+      if (!cursor) break;
+    }
+
+    const metaKey = `${this.META_PREFIX}${scope}`;
+    await this.put(metaKey, allKeys as any);
   }
 }
 

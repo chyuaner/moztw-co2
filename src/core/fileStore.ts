@@ -185,6 +185,23 @@ export class FileStore<T = any> implements IStore<T> {
       cursor: list_complete ? undefined : Buffer.from(nextIndex.toString()).toString('base64'),
     };
   }
+
+  async scopedMetaRefresh(scope: string): Promise<void> {
+    const allKeys: string[] = [];
+    let cursor: string | undefined;
+    let listComplete = false;
+
+    while (!listComplete) {
+      const result = await this.scopedKvList(scope, { cursor, limit: 1000 });
+      allKeys.push(...result.keys.map(k => k.name));
+      cursor = result.cursor;
+      listComplete = result.list_complete;
+      if (!cursor) break;
+    }
+
+    const metaKey = `_m:${scope}`;
+    await this.put(metaKey, allKeys as any);
+  }
 }
 
 
