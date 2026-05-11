@@ -88,15 +88,43 @@ async function main(): Promise<void> {
   else if (args.includes('--refresh-meta')) {
     const scopeIndex = args.indexOf('--refresh-meta') + 1;
     const scope = args[scopeIndex];
-    if (!scope) {
-      console.error(`${colors.red}錯誤: 請提供 scope 名稱。範例: --refresh-meta deviceId:B0E9FEF087CD:202605${colors.reset}`);
-      return;
-    }
 
     try {
-      console.log(`${colors.yellow}正在重新整理遠端 Metadata 索引: ${scope}...${colors.reset}`);
-      await remoteStore.scopedMetaRefresh(scope);
-      console.log(`${colors.green}遠端 Metadata 索引重刷完成！${colors.reset}`);
+      if (scope) {
+        console.log(`${colors.yellow}正在重新整理遠端 Metadata 索引: ${scope}...${colors.reset}`);
+        await remoteStore.scopedMetaRefresh(scope);
+        console.log(`${colors.green}遠端 Metadata 索引重刷完成！${colors.reset}`);
+      } else {
+        console.log(`${colors.yellow}正在掃描所有資料並重新整理全部 Metadata 索引...${colors.reset}`);
+        let cursor: string | undefined;
+        let listComplete = false;
+        const scopeGroups: Record<string, string[]> = {};
+
+        // 1. 掃描所有帶有 _s: 前綴的 Key
+        while (!listComplete) {
+          const result = await remoteStore.list({ prefix: '_s:', cursor, limit: 1000 });
+          for (const k of result.keys) {
+            const parts = k.name.split(':');
+            const s = parts.slice(1, -1).join(':');
+            const key = parts[parts.length - 1];
+            if (!scopeGroups[s]) scopeGroups[s] = [];
+            scopeGroups[s].push(key);
+          }
+          cursor = result.cursor;
+          listComplete = result.list_complete;
+          if (!cursor) break;
+        }
+
+        // 2. 針對每個 Scope 寫入 Metadata
+        const scopes = Object.keys(scopeGroups);
+        console.log(`${colors.cyan}找到 ${scopes.length} 個 Scope，開始更新索引...${colors.reset}`);
+        for (const s of scopes) {
+          const metaKey = `_m:${s}`;
+          await remoteStore.put(metaKey, scopeGroups[s]);
+          console.log(`  [${s}] 更新完成 (${scopeGroups[s].length} 筆資料)`);
+        }
+        console.log(`${colors.green}全量 Metadata 索引重刷完成！${colors.reset}`);
+      }
     } catch (error) {
       console.error(`${colors.red}重刷失敗: ${error instanceof Error ? error.message : String(error)}${colors.reset}`);
     }
