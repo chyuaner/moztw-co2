@@ -37,43 +37,30 @@ const getSensors = (c: any) => {
   }
 };
 
-
-// 取得所有感測器資料的輔助函式
-const getSpaceApiAllSensors = async (c: any) => {
-  const sensors = getSensors(c);
-  const result: any = {
-    temperature: [],
-    humidity: [],
-    carbondioxide: [],
-  };
-
-  for (const s of sensors) {
-    const data = await s.getAll();
-    const formatted = formatSpaceApi(s.id, s.name, data);
-
-    if (formatted.temperature) result.temperature.push(formatted.temperature);
-    if (formatted.humidity) result.humidity.push(formatted.humidity);
-    if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-  }
-
-  return result;
-};
-
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
 app.get('/', async (c) => {
-  try {
-    const data = await getSpaceApiAllSensors(c);
-    return c.json(data);
-  } catch (error) {
-    console.error(`[Error] GET /:`, error);
-    return c.text('無法抓取空間資訊，請稍後再試。', 500);
-  }
+  return c.html('<h1>摩茲工寮環境資訊</h1><p>前端頁面製作中，請移駕至 <a href="/sensors">/sensors</a></p>');
 });
 
 app.get('/sensors', async (c) => {
   try {
-    const data = await getSpaceApiAllSensors(c);
-    return c.json(data);
+    const sensors = getSensors(c);
+    const result: any = {
+      temperature: [],
+      humidity: [],
+      carbondioxide: [],
+    };
+
+    for (const s of sensors) {
+      const data = await s.getAll();
+      const formatted = formatSpaceApi(s.id, s.name, data);
+
+      if (formatted.temperature) result.temperature.push(formatted.temperature);
+      if (formatted.humidity) result.humidity.push(formatted.humidity);
+      if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+    }
+
+    return c.json(result);
   } catch (error) {
     console.error(`[Error] GET /sensors:`, error);
     return c.text('無法抓取空間資訊，請稍後再試。', 500);
