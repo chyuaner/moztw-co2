@@ -7,6 +7,9 @@
     "dev:node": "tsx src/node.ts",
     "dev:tg": "tsx src/tg-lp.ts",
     "get": "tsx src/cli.ts",
+    "kv:refresh": "tsx src/cf-cli.ts --refresh-meta",
+    "kv:export": "tsx src/cf-cli.ts --export",
+    "kv:import": "tsx src/cf-cli.ts --import",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },

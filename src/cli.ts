@@ -20,11 +20,11 @@ function showHelp(): void {
 
 選項:
   --help                顯示此說明訊息
-  --refresh-meta <scope> 重新整理特定範圍的 Metadata 索引 (例如 deviceId:B0E9FEF087CD:202605)
   --recent              (預留功能) 執行近期上傳模式
 
 說明:
   直接執行會從 SENSORS_CONFIG 抓取所有感測器的當前數值並顯示。
+  此工具僅用於即時狀態查詢。如需管理 Cloudflare KV 資料，請使用 npm run kv:* 相關指令。
 `);
 }
 
@@ -42,30 +42,10 @@ async function main(): Promise<void> {
 
   console.log(`${colors.cyan}=== MozTW Space Info CLI ===${colors.reset}\n`);
 
-  if (args.includes('--refresh-meta')) {
-    const scopeIndex = args.indexOf('--refresh-meta') + 1;
-    const scope = args[scopeIndex];
-    if (!scope) {
-      console.error(`${colors.red}錯誤: 請提供 scope 名稱。範例: --refresh-meta deviceId:B0E9FEF087CD:202605${colors.reset}`);
-      return;
-    }
-
-    try {
-      console.log(`${colors.yellow}正在重新整理 Metadata 索引: ${scope}...${colors.reset}`);
-      const { FileStore } = await import('./core/fileStore.js');
-      // 假設本地 CLI 使用 ./data 目錄作為儲存路徑
-      const store = new FileStore('./data');
-      await store.scopedMetaRefresh(scope);
-      console.log(`${colors.green}Metadata 索引重刷完成！${colors.reset}`);
-    } catch (error) {
-      console.error(`${colors.red}重刷失敗: ${error instanceof Error ? error.message : String(error)}${colors.reset}`);
-    }
-    return;
-  }
-
   if (args.includes('--recent')) {
     console.log(`${colors.yellow}正在執行近期上傳模式...${colors.reset}`);
     // TODO: 實作爬蟲或相關邏輯
+    return;
   }
 
   // 抓取感測器資料
