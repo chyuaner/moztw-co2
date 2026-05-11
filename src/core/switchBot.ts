@@ -89,6 +89,7 @@ export class SwitchBot {
       co2_iswebhook: newData.co2 !== undefined ? isWebhook : prev?.co2_iswebhook,
       
       lastchange: shouldUpdateOverallLastchange ? time : prev?.lastchange,
+      isWebhook: isWebhook,
     };
 
     // 移除所有判定邏輯，一律寫入
