@@ -39,7 +39,7 @@ const getSensors = (c: any) => {
 
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
 app.get('/', async (c) => {
-  return c.html('<h1>摩茲工寮環境資訊</h1><p>前端頁面製作中，請移駕至 <a href="/sensors">/sensors</a></p>');
+  return c.html('<h1>摩茲工寮環境資訊</h1><p>前端頁面製作中，請參閱 <a href="/sensors">/sensors</a> (SpaceAPI) 或 <a href="/devices">/devices</a> (Original Format)</p>');
 });
 
 app.get('/sensors', async (c) => {
@@ -90,6 +90,48 @@ app.get('/sensors/:id', async (c) => {
   } catch (error) {
     console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
     return c.text('無法抓取空間資訊，請稍後再試。', 500);
+  }
+});
+
+// 本站原始格式 API 路由 (SensorDataRecord 規格)
+app.get('/devices', async (c) => {
+  try {
+    const sensors = getSensors(c);
+    const result: any[] = [];
+
+    for (const s of sensors) {
+      const data = await s.getAll();
+      result.push({
+        id: s.id,
+        name: s.name,
+        ...data,
+      });
+    }
+
+    return c.json(result);
+  } catch (error) {
+    console.error(`[Error] GET /devices:`, error);
+    return c.text('無法抓取裝置資訊，請稍後再試。', 500);
+  }
+});
+
+app.get('/devices/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const sensors = getSensors(c);
+    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    if (!sensor) {
+      return c.json({ error: 'Device not found' }, 404);
+    }
+    const data = await sensor.getAll();
+    return c.json({
+      id: sensor.id,
+      name: sensor.name,
+      ...data,
+    });
+  } catch (error) {
+    console.error(`[Error] GET /devices/${c.req.param('id')}:`, error);
+    return c.text('無法抓取裝置資訊，請稍後再試。', 500);
   }
 });
 
