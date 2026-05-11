@@ -27,10 +27,19 @@ export interface IStore<T = any> {
     list_complete: boolean;
     cursor?: string;
   }>;
+  /**
+   * 強制從 KV 真正的 list() 調用取得特定範圍內的所有 Key
+   */
+  scopedKvList(scope: string, options?: { limit?: number; cursor?: string }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }>;
 }
 
 export class KVStore<T = any> implements IStore<T> {
   private readonly SCOPE_PREFIX = '_s:';
+  private readonly META_PREFIX = '_m:';
 
   constructor(private kv: any) {}
 
@@ -56,6 +65,15 @@ export class KVStore<T = any> implements IStore<T> {
     if (!this.kv) return;
     const fullKey = `${this.SCOPE_PREFIX}${scope}:${key}`;
     await this.kv.put(fullKey, JSON.stringify(value));
+
+    // 自動維護 Metadata 索引
+    const metaKey = `${this.META_PREFIX}${scope}`;
+    const metaData = await this.get(metaKey) as string[] | null;
+    const updatedMeta = metaData ? [...metaData] : [];
+    if (!updatedMeta.includes(key)) {
+      updatedMeta.push(key);
+      await this.put(metaKey, updatedMeta as any);
+    }
   }
 
   async list(options?: { prefix?: string; limit?: number; cursor?: string }): Promise<{
@@ -80,6 +98,27 @@ export class KVStore<T = any> implements IStore<T> {
   }
 
   async scopedList(scope: string, options?: { limit?: number; cursor?: string }): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }> {
+    if (!this.kv) return { keys: [], list_complete: true };
+
+    const metaKey = `${this.META_PREFIX}${scope}`;
+    const metaData = await this.get(metaKey) as string[] | null;
+
+    if (metaData && Array.isArray(metaData)) {
+      return {
+        keys: metaData.map(name => ({ name })),
+        list_complete: true,
+      };
+    }
+
+    // 如果沒有 Metadata，則退而求其次使用 KV list
+    return this.scopedKvList(scope, options);
+  }
+
+  async scopedKvList(scope: string, options?: { limit?: number; cursor?: string }): Promise<{
     keys: { name: string }[];
     list_complete: boolean;
     cursor?: string;

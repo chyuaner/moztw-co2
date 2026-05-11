@@ -169,9 +169,10 @@ export class SwitchBot {
       const timestampMs = Date.now();
       const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6); // YYYYMM (按月分桶)
       const scope = `deviceId:${this.deviceId}:${dateStr}`;
+      const timestampStr = `${timestampMs}`;
       
       if (this.store) {
-        await this.store.scopedPut(scope, `${timestampMs}`, savedata);
+        await this.store.scopedPut(scope, timestampStr, savedata);
       }
     } catch (err) {
       console.error('[Store Error] Failed to write raw ingestion record:', err);

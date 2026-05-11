@@ -72,6 +72,15 @@ export class FileStore<T = any> implements IStore<T> {
     const entry = { k: key, v: value };
     // 使用 appendFile 進行原子追加，避免同時寫入衝突
     await fs.appendFile(scopePath, JSON.stringify(entry) + '\n', 'utf-8');
+
+    // 自動維護 Metadata 索引 (儲存於主資料檔案 data.json 中)
+    const metaKey = `_m:${scope}`;
+    const metaData = await this.get(metaKey) as string[] | null;
+    const updatedMeta = metaData ? [...metaData] : [];
+    if (!updatedMeta.includes(key)) {
+      updatedMeta.push(key);
+      await this.put(metaKey, updatedMeta as any);
+    }
   }
 
   async list(options: { prefix?: string; limit?: number; cursor?: string } = {}): Promise<{
@@ -114,6 +123,25 @@ export class FileStore<T = any> implements IStore<T> {
   }
 
   async scopedList(scope: string, options: { limit?: number; cursor?: string } = {}): Promise<{
+    keys: { name: string }[];
+    list_complete: boolean;
+    cursor?: string;
+  }> {
+    const metaKey = `_m:${scope}`;
+    const metaData = await this.get(metaKey) as string[] | null;
+
+    if (metaData && Array.isArray(metaData)) {
+      return {
+        keys: metaData.map(name => ({ name })),
+        list_complete: true,
+      };
+    }
+
+    // 如果沒有 Metadata，則使用原本的掃描邏輯
+    return this.scopedKvList(scope, options);
+  }
+
+  async scopedKvList(scope: string, options: { limit?: number; cursor?: string } = {}): Promise<{
     keys: { name: string }[];
     list_complete: boolean;
     cursor?: string;
