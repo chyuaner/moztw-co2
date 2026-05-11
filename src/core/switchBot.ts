@@ -21,12 +21,6 @@ export interface SensorDataRecord {
   lastchange?: number;
 }
 
-export interface SwitchBotData {
-  temperature?: number;
-  humidity?: number;
-  co2?: number;
-}
-
 export class SwitchBot {
   public id: string;
   public name: string;
@@ -40,7 +34,7 @@ export class SwitchBot {
   public staleThresholdSeconds: number = 300;
 
   // 內部變數，只要 fetch 過一次就會一直存著
-  private data: SwitchBotData | null = null;
+  private data: SensorDataRecord | null = null;
   public temperature_lastchange?: number;
   public temperature_iswebhook?: boolean;
   public humidity_lastchange?: number;
@@ -50,7 +44,7 @@ export class SwitchBot {
   public lastchange?: number;
   
   // 避免同時間併發觸發多次 fetch
-  private fetchPromise: Promise<SwitchBotData> | null = null;
+  private fetchPromise: Promise<SensorDataRecord> | null = null;
 
   constructor(config: SensorConfig, store?: import('./store.js').IStore<SensorDataRecord>) {
     this.id = config.id;
@@ -70,7 +64,7 @@ export class SwitchBot {
    * 共用的儲存邏輯
    * 無論是主動詢問(fetch)還是被動接收(webhook)，最後儲存時都走一樣的邏輯
    */
-  private async saveToStore(newData: Partial<SwitchBotData>, updateTime?: number, isWebhook: boolean = false) {
+  private async saveToStore(newData: Partial<SensorDataRecord>, updateTime?: number, isWebhook: boolean = false) {
     const now = Math.floor(Date.now() / 1000);
     const time = updateTime || now;
     
@@ -133,7 +127,7 @@ export class SwitchBot {
       this.lastchange = prev?.lastchange;
     }
 
-    const savedata = {
+    const savedata: SensorDataRecord = {
       temperature: updatedTemperature,
       temperature_lastchange: this.temperature_lastchange,
       temperature_iswebhook: this.temperature_iswebhook,
@@ -155,6 +149,7 @@ export class SwitchBot {
 
     try {
       await this.store.put(recordKey, savedata);
+      this.data = savedata; // 更新記憶體緩存
     } catch (err) {
       console.error('[Store Error] Failed to update current record:', err);
     }
@@ -183,7 +178,7 @@ export class SwitchBot {
    * 提供給 webhook 接收資料使用的 function
    */
   public async updateFromWebhook(context: any) {
-    const newData: Partial<SwitchBotData> = {};
+    const newData: Partial<SensorDataRecord> = {};
     if (context.temperature !== undefined) newData.temperature = context.temperature;
     if (context.humidity !== undefined) newData.humidity = context.humidity;
     if (context.CO2 !== undefined) newData.co2 = context.CO2;
@@ -195,26 +190,13 @@ export class SwitchBot {
     }
 
     await this.saveToStore(newData, updateTime, true);
-
-    // 更新記憶體資料
-    if (this.data) {
-      if (newData.temperature !== undefined) this.data.temperature = newData.temperature;
-      if (newData.humidity !== undefined) this.data.humidity = newData.humidity;
-      if (newData.co2 !== undefined) this.data.co2 = newData.co2;
-    } else {
-      this.data = {
-        temperature: newData.temperature,
-        humidity: newData.humidity,
-        co2: newData.co2,
-      };
-    }
   }
 
   /**
    * 手動重新抓取資料，並更新內部變數
    * 外部若需要強制更新，可以直接呼叫此方法
    */
-  public async fetch(): Promise<SwitchBotData> {
+  public async fetch(): Promise<SensorDataRecord> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -238,7 +220,7 @@ export class SwitchBot {
       throw new Error(`SwitchBot API Error: ${json.message}`);
     }
 
-    const newData: Partial<SwitchBotData> = {
+    const newData: Partial<SensorDataRecord> = {
       temperature: json.body.temperature,
       humidity: json.body.humidity,
       co2: json.body.CO2 !== undefined ? json.body.CO2 : json.body.co2,
@@ -246,24 +228,13 @@ export class SwitchBot {
 
     await this.saveToStore(newData, undefined, false);
 
-    if (this.data) {
-      if (newData.temperature !== undefined) this.data.temperature = newData.temperature;
-      if (newData.humidity !== undefined) this.data.humidity = newData.humidity;
-      if (newData.co2 !== undefined) this.data.co2 = newData.co2;
-    } else {
-      this.data = {
-        temperature: newData.temperature,
-        humidity: newData.humidity,
-        co2: newData.co2,
-      };
-    }
-    return this.data;
+    return this.data || {};
   }
 
   /**
    * 確保資料已載入，優先從已儲存的資訊輸出，若沒資料或過期才自動 fetch
    */
-  private async ensureData(): Promise<SwitchBotData> {
+  private async ensureData(): Promise<SensorDataRecord> {
     const now = Math.floor(Date.now() / 1000);
     let isStale = true;
 
@@ -272,11 +243,7 @@ export class SwitchBot {
       const record = await this.store.get(recordKey);
       
       if (record) {
-        this.data = {
-          temperature: record.temperature !== undefined ? record.temperature : this.data?.temperature,
-          humidity: record.humidity !== undefined ? record.humidity : this.data?.humidity,
-          co2: record.co2 !== undefined ? record.co2 : this.data?.co2,
-        };
+        this.data = record;
         this.temperature_lastchange = record.temperature_lastchange;
         this.temperature_iswebhook = record.temperature_iswebhook;
         this.humidity_lastchange = record.humidity_lastchange;
@@ -320,7 +287,7 @@ export class SwitchBot {
     }
   }
 
-  public async getAll(): Promise<SwitchBotData> {
+  public async getAll(): Promise<SensorDataRecord> {
     return await this.ensureData();
   }
 

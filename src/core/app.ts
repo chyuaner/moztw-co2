@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { env } from 'hono/adapter';
 import { webhookCallback } from 'grammy';
 import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
-import { SwitchBot, SensorConfig, SwitchBotData } from './switchBot.js';
+import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { IStore } from './store.js';
 
 export type Variables = {
@@ -37,7 +37,7 @@ const getSensors = (c: any) => {
 };
 
 // 依照 SpaceAPI Schema 轉換 Sensor 格式的輔助函式
-const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SwitchBotData }[]) => {
+const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SensorDataRecord }[]) => {
   const now = Math.floor(Date.now() / 1000);
 
   const temperature = dataList
@@ -47,7 +47,7 @@ const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SwitchBotData }[]) 
       unit: '°C',
       location: item.sensor.id,
       name: item.sensor.name,
-      lastchange: item.sensor.temperature_lastchange || item.sensor.lastchange || now,
+      lastchange: item.data.temperature_lastchange || item.data.lastchange || now,
     }));
 
   const humidity = dataList
@@ -57,7 +57,7 @@ const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SwitchBotData }[]) 
       unit: '%',
       location: item.sensor.id,
       name: item.sensor.name,
-      lastchange: item.sensor.humidity_lastchange || item.sensor.lastchange || now,
+      lastchange: item.data.humidity_lastchange || item.data.lastchange || now,
     }));
 
   const carbondioxide = dataList
@@ -67,7 +67,7 @@ const formatSpaceApi = (dataList: { sensor: SwitchBot; data: SwitchBotData }[]) 
       unit: 'ppm',
       location: item.sensor.id,
       name: item.sensor.name,
-      lastchange: item.sensor.co2_lastchange || item.sensor.lastchange || now,
+      lastchange: item.data.co2_lastchange || item.data.lastchange || now,
     }));
 
   return {
