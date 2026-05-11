@@ -161,7 +161,7 @@ export class SwitchBot {
     }
 
     try {
-      const timestampMs = Date.now();
+      const timestampMs = this.lastchange ? this.lastchange * 1000 : Date.now();
       const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6); // YYYYMM (按月分桶)
       const scope = `deviceId:${this.deviceId}:${dateStr}`;
       const timestampStr = `${timestampMs}`;
