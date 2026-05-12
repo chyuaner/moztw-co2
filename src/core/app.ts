@@ -193,7 +193,9 @@ app.get('/devices/:id/history', async (c) => {
 
 
 // SwitchBot Webhook 接收端點
-app.post('/switch-bot', async (c) => {
+app.post('/switch-bot/:token', async (c) => {
+  const tokenFromPath = c.req.param('token');
+  
   try {
     const body = await c.req.json();
     console.log('[Webhook] Received:', JSON.stringify(body));
@@ -208,6 +210,12 @@ app.post('/switch-bot', async (c) => {
       });
       
       if (targetSensor) {
+        // 安全檢查：驗證 URL 中的 token 是否與該感測器配置的 token 吻合
+        if (!targetSensor.checkToken(tokenFromPath)) {
+          console.warn(`[Webhook] Unauthorized access attempt for deviceMac: ${mac} with token: ${tokenFromPath}`);
+          return c.text('Unauthorized', 401);
+        }
+
         await targetSensor.updateFromWebhook(body.context);
         return c.text('OK');
       } else {

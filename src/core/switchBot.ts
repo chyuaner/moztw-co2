@@ -51,6 +51,13 @@ export class SwitchBot {
     this.store = store;
   }
 
+  /**
+   * 檢查 Token 是否吻合 (用於 Webhook 安全驗證)
+   */
+  public checkToken(token: string): boolean {
+    return !!this.token && this.token === token;
+  }
+
   private get apiUrl() {
     return `https://api.switch-bot.com/v1.1/devices/${this.deviceId}/status`;
   }
