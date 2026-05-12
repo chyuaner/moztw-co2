@@ -107,9 +107,9 @@ const IndexPage: FC<{}> = (props) => {
       <ul>
       <li><a href="/sensors"><code>/sensors</code></a> - 依據 <a href="https://spaceapi.io/docs">SpaceAPI</a> 規格提供所有感測器的數據。</li>
       <li><a href="/sensors/:id"><code>/sensors/:id</code></a> - 取得特定感測器（SpaceAPI 格式）的數據。</li>
-      <li><a href="/devices"><code>/devices</code></a> - 提供所有裝置的原始格式數據。</li>
-      <li><a href="/devices/:id"><code>/devices/:id</code></a> - 取得特定裝置的原始格式數據。</li>
-      <li><a href="/devices/:id/history"><code>/devices/:id/history</code></a> - 取得特定裝置的歷史數據。</li>
+      <li><a href="/locations"><code>/locations</code></a> - 提供所有裝置的原始格式數據。</li>
+      <li><a href="/locations/:id"><code>/locations/:id</code></a> - 取得特定裝置的原始格式數據。</li>
+      <li><a href="/locations/:id/history"><code>/locations/:id/history</code></a> - 取得特定裝置的歷史數據。</li>
       </ul>
       <p>
       您也可以透過 Telegram Bot 查詢即時資訊。請在 Telegram 搜尋您的 Bot 名稱 (由 `TELEGRAM_BOT_TOKEN` 環境變數設定)。

@@ -19,6 +19,10 @@ export type Bindings = {
 
 export const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+/* -----------------------------------------------------------------------------
+Helper 區
+----------------------------------------------------------------------------- */
+
 // 取得感測器實例列表的輔助函式
 const getSensors = (c: any) => {
   const bindings = env<Bindings>(c);
@@ -37,6 +41,10 @@ const getSensors = (c: any) => {
     return [];
   }
 };
+
+/* -----------------------------------------------------------------------------
+主要 Router 邏輯區
+----------------------------------------------------------------------------- */
 
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
 app.get('/', async (c) => {
@@ -95,7 +103,7 @@ app.get('/sensors/:id', async (c) => {
 });
 
 // 本站原始格式 API 路由 (SensorDataRecord 規格)
-app.get('/devices', async (c) => {
+app.get('/locations', async (c) => {
   try {
     const sensors = getSensors(c);
     const result: any[] = [];
@@ -116,7 +124,7 @@ app.get('/devices', async (c) => {
   }
 });
 
-app.get('/devices/:id', async (c) => {
+app.get('/locations/:id', async (c) => {
   try {
     const id = c.req.param('id');
     const sensors = getSensors(c);
@@ -136,7 +144,7 @@ app.get('/devices/:id', async (c) => {
   }
 });
 
-app.get('/devices/:id/history', async (c) => {
+app.get('/locations/:id/history', async (c) => {
   try {
     const id = c.req.param('id');
     const sensors = getSensors(c);
@@ -192,6 +200,9 @@ app.get('/devices/:id/history', async (c) => {
   }
 });
 
+/* -----------------------------------------------------------------------------
+接入整合外部服務區
+----------------------------------------------------------------------------- */
 
 // SwitchBot Webhook 接收端點
 app.post('/switch-bot/:token', async (c) => {
