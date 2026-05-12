@@ -6,6 +6,7 @@ export interface SensorConfig {
   token?: string;
   secret?: string;
   only_webhook?: boolean;
+  thingspeak?: Record<string, string>;
 }
 
 export interface SensorDataRecord {
@@ -29,6 +30,7 @@ export class SwitchBot {
   public only_webhook: boolean = false;
   private token: string;
   private secret: string;
+  private thingspeak?: Record<string, string>;
   private store?: import('./store.js').IStore<SensorDataRecord>;
 
   // 在類別頂部定義過期時間變數，單位秒 (預設 1小時 = 3600秒)
@@ -48,6 +50,7 @@ export class SwitchBot {
     this.token = config.token || '';
     this.secret = config.secret || '';
     this.only_webhook = config.only_webhook || false;
+    this.thingspeak = config.thingspeak;
     this.store = store;
   }
 
@@ -171,6 +174,28 @@ export class SwitchBot {
     }
   }
 
+  public async syncToThingSpeak(data: SensorDataRecord) {
+    if (!this.thingspeak) return;
+
+    for (const [key, url] of Object.entries(this.thingspeak)) {
+      const value = (data as any)[key];
+      if (value !== undefined && value !== null) {
+        // 將 %d 替換為欄位值
+        const finalUrl = url.replace('%d', String(value));
+        console.log(`[ThingSpeak] ${this.name} 同步 ${key} 到: ${finalUrl}`);
+        
+        try {
+          const resp = await fetch(finalUrl);
+          if (!resp.ok) {
+            console.error(`[ThingSpeak] ${this.name} 同步 ${key} 失敗: ${resp.status} ${resp.statusText}`);
+          }
+        } catch (err) {
+          console.error(`[ThingSpeak] ${this.name} 同步 ${key} 時發生錯誤:`, err);
+        }
+      }
+    }
+  }
+
   /**
    * 提供給 webhook 接收資料使用的 function
    */
@@ -188,6 +213,9 @@ export class SwitchBot {
 
     const consolidated = await this.consolidate(newData);
     await this.saveToStore(consolidated);
+
+    // 同步到 ThingSpeak
+    await this.syncToThingSpeak(consolidated);
   }
 
   /**
