@@ -24,7 +24,7 @@ function showHelp(): void {
   npm run kv:refresh -- <scope>  重新整理遠端 KV 的 Metadata 索引
 
 環境變數需求:
-  CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID, CF_API_TOKEN
+  CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_KV_NAMESPACE_ID, CLOUDFLARE_API_TOKEN
 `);
 }
 
@@ -36,12 +36,12 @@ async function main(): Promise<void> {
     return;
   }
 
-  const accountId = process.env.CF_ACCOUNT_ID;
-  const namespaceId = process.env.CF_KV_NAMESPACE_ID;
-  const apiToken = process.env.CF_API_TOKEN;
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const namespaceId = process.env.CLOUDFLARE_KV_NAMESPACE_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
 
   if (!accountId || !namespaceId || !apiToken) {
-    console.error(`${colors.red}錯誤: 缺少 Cloudflare 設定。請在 .env 中設定 CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID, CF_API_TOKEN${colors.reset}`);
+    console.error(`${colors.red}錯誤: 缺少 Cloudflare 設定。請在 .env 中設定 CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_KV_NAMESPACE_ID, CLOUDFLARE_API_TOKEN${colors.reset}`);
     process.exit(1);
   }
 
