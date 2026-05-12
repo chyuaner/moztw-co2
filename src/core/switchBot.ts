@@ -86,18 +86,21 @@ export class SwitchBot {
       const prevValue = prev?.[valueKey];
 
       if (newValue !== undefined) {
-        if (newValue !== prevValue) {
+        // 確保數值比較準確 (轉換為 Number 避免字串/數字混合比較問題)
+        const isChanged = prevValue === undefined || Number(newValue) !== Number(prevValue);
+
+        if (isChanged) {
           // Value changed or first record
           return {
             value: newValue,
-            lastchange: now,
+            lastchange: time, // 使用數據產生的時間戳記
             iswebhook: isWebhook,
           };
         } else {
           // Value unchanged, keep previous metadata
           return {
             value: newValue,
-            lastchange: prev?.[lastchangeKey] || now,
+            lastchange: prev?.[lastchangeKey] || time,
             iswebhook: prev?.[isWebhookKey] ?? isWebhook,
           };
         }
