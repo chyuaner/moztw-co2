@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { app } from './core/app.js';
 import { FileStore } from './core/fileStore.js';
+import { ImageResponse } from "@cf-wasm/og";
 import { Hono } from 'hono';
 import path from 'node:path';
 import 'dotenv/config';
@@ -11,6 +12,7 @@ mainApp.use('*', async (c, next) => {
   if (!c.get('store')) {
     c.set('store', new FileStore(path.resolve(process.cwd(), '.data/')));
   }
+  c.set("ImageResponse", ImageResponse);
   await next();
 });
 

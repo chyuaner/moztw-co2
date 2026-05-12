@@ -6,9 +6,11 @@ import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
 import { Base, IndexPage } from './html.js';
+import { OgSensor } from './og.js';
 
 export type Variables = {
   store: IStore;
+  ImageResponse: any;
 };
 
 export type Bindings = {
@@ -199,6 +201,44 @@ app.get('/locations/:id/history', async (c) => {
     return c.text('無法抓取歷史資訊，請稍後再試。', 500);
   }
 });
+
+/* -----------------------------------------------------------------------------
+OG即時產圖區
+----------------------------------------------------------------------------- */
+const og = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+og.get('/locations/:id', async (c) => {
+  const ImageResponse = c.get('ImageResponse');
+
+  if (!ImageResponse) {
+    return c.text('ImageResponse not found in context', 500);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const sensors = getSensors(c);
+    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    if (!sensor) {
+      return c.text('Device not found', 404);
+    }
+    const data = await sensor.getAll();
+    const deviceId = sensor.id;
+    const name = sensor.name;
+    const temperature = data.temperature;
+    const humidity = data.humidity;
+    const co2 = data.co2;
+
+    return new ImageResponse(OgSensor({id, name, temperature, humidity, co2}), 
+      {
+        width: 1200,
+        height: 630,
+      });
+  } catch (error) {
+    console.error('[OG Error]', error);
+    return c.text('無法產出 OG 圖片，請稍後再試。', 500);
+  }
+});
+
+app.route('/og', og);
 
 /* -----------------------------------------------------------------------------
 接入整合外部服務區
