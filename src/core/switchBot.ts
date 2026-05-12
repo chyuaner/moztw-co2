@@ -79,15 +79,28 @@ export class SwitchBot {
       const lastchangeKey = `${key}_lastchange` as const;
       const isWebhookKey = `${key}_iswebhook` as const;
 
-      if (newData[valueKey] !== undefined) {
-        return {
-          value: newData[valueKey],
-          lastchange: now,
-          iswebhook: isWebhook,
-        };
+      const newValue = newData[valueKey];
+      const prevValue = prev?.[valueKey];
+
+      if (newValue !== undefined) {
+        if (newValue !== prevValue) {
+          // Value changed or first record
+          return {
+            value: newValue,
+            lastchange: now,
+            iswebhook: isWebhook,
+          };
+        } else {
+          // Value unchanged, keep previous metadata
+          return {
+            value: newValue,
+            lastchange: prev?.[lastchangeKey] || now,
+            iswebhook: prev?.[isWebhookKey] ?? isWebhook,
+          };
+        }
       } else {
         return {
-          value: prev?.[valueKey],
+          value: prevValue,
           lastchange: prev?.[lastchangeKey],
           iswebhook: prev?.[isWebhookKey],
         };
