@@ -55,7 +55,7 @@ export class SwitchBot {
     return `https://api.switch-bot.com/v1.1/devices/${this.deviceId}/status`;
   }
 
-  private async saveToStore(newData: Partial<SensorDataRecord>) {
+  private async consolidate(newData: Partial<SensorDataRecord>): Promise<SensorDataRecord> {
     const now = Math.floor(Date.now() / 1000);
     const isWebhook = newData.isWebhook || false;
     const time = newData.lastchange || now;
@@ -63,13 +63,9 @@ export class SwitchBot {
     // 如果是 fetch 且設定了 only_webhook，則不更新整體的 lastchange
     const shouldUpdateOverallLastchange = !(this.only_webhook && !isWebhook);
 
-    if (!this.store) {
-      this.lastchange = shouldUpdateOverallLastchange ? time : this.lastchange;
-      return;
-    }
-
     const recordKey = `sensor:${this.deviceId}`;
-    const prev = await this.store.get(recordKey);
+    // 優先從 store 取得前一次紀錄，若無則回退至記憶體中的 data
+    const prev = this.store ? await this.store.get(recordKey) : (this.data || undefined);
 
     // Helper function to consolidate property updates
     const getConsolidatedProperty = <K extends 'temperature' | 'humidity' | 'co2'>(
@@ -111,7 +107,7 @@ export class SwitchBot {
     const humProps = getConsolidatedProperty('humidity');
     const co2Props = getConsolidatedProperty('co2');
 
-    const savedata: SensorDataRecord = {
+    return {
       temperature: tempProps.value,
       temperature_lastchange: tempProps.lastchange,
       temperature_iswebhook: tempProps.iswebhook,
@@ -127,6 +123,17 @@ export class SwitchBot {
       lastchange: shouldUpdateOverallLastchange ? time : prev?.lastchange,
       isWebhook: isWebhook,
     };
+  }
+
+  private async saveToStore(savedata: SensorDataRecord) {
+    if (!this.store) {
+      this.lastchange = savedata.lastchange;
+      this.data = savedata;
+      return;
+    }
+
+    const recordKey = `sensor:${this.deviceId}`;
+    const isWebhook = savedata.isWebhook || false;
 
     // 移除所有判定邏輯，一律寫入
     console.log(`[SwitchBot] ${this.name} 執行儲存 (來源: ${isWebhook ? 'Webhook' : 'Fetch'})`);
@@ -170,7 +177,8 @@ export class SwitchBot {
     }
     newData.isWebhook = true;
 
-    await this.saveToStore(newData);
+    const consolidated = await this.consolidate(newData);
+    await this.saveToStore(consolidated);
   }
 
   /**
@@ -208,7 +216,8 @@ export class SwitchBot {
     };
 
     newData.isWebhook = false;
-    await this.saveToStore(newData);
+    const consolidated = await this.consolidate(newData);
+    await this.saveToStore(consolidated);
 
     return this.data || {};
   }
