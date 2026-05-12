@@ -299,7 +299,7 @@ app.post('/bot/:token', async (c) => {
     console.error('[Config Error] Failed to parse SENSORS_CONFIG for Bot:', e);
   }
 
-  const bot = createBot(TELEGRAM_BOT_TOKEN, sensorsConfig, c.get('store'));
+  const bot = createBot(TELEGRAM_BOT_TOKEN, sensorsConfig, c.get('store'), new URL(c.req.url).origin, c.get('ImageResponse'));
   
   // 使用 grammY 內建的 webhookCallback，並指定 adapter 為 'hono'
   const handleUpdate = webhookCallback(bot, 'hono');

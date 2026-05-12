@@ -1,8 +1,9 @@
-import { Bot } from 'grammy';
+import { Bot, InputFile } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
+import { OgSensor } from './og.js';
 
-export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore) => {
+export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
   const bot = new Bot(token);
 
   // 初始化所有感測器
@@ -63,6 +64,55 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     } catch (error) {
       console.error('[Bot Error] /co2:', error);
       await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
+    }
+  });
+
+  bot.command('ogtest', async (ctx) => {
+    try {
+      const sensors = getSensors();
+      const sensor = sensors.find(s => s.id === 'inside') || sensors[0];
+      if (!sensor) return await ctx.reply('❌ 找不到感測器資訊');
+
+      const domain = baseUrl || 'https://moztw-co2.yuaner.tw';
+      const imageUrl = `${domain}/og/locations/${sensor.id}?t=${Date.now()}`;
+      
+      await ctx.replyWithPhoto(imageUrl, {
+        caption: `✅ 圖片已生成 (URL 模式)\n📍 感測器：${sensor.name}\n🔗 網址：${imageUrl}`,
+        parse_mode: "Markdown"
+      });
+    } catch (error) {
+      console.error('[Bot Error] /ogtest:', error);
+      await ctx.reply('❌ 產圖失敗，請稍後再試。');
+    }
+  });
+
+  bot.command('ogtest2', async (ctx) => {
+    try {
+      if (!ImageResponse) {
+        return await ctx.reply('❌ 目前環境不支援直接生成圖片 (ImageResponse missing)');
+      }
+      
+      const sensors = getSensors();
+      const sensor = sensors.find(s => s.id === 'inside') || sensors[0];
+      if (!sensor) return await ctx.reply('❌ 找不到感測器資訊');
+
+      const data = await sensor.getAll();
+      const { id, name } = sensor;
+      const { temperature, humidity, co2 } = data;
+
+      const imgRes = new ImageResponse(OgSensor({id, name, temperature, humidity, co2}), 
+      {
+        width: 1200,
+        height: 630,
+      });
+
+      await ctx.replyWithPhoto(new InputFile(imgRes.body), {
+        caption: `✅ 圖片已生成 (直接渲染模式)\n📍 感測器：${sensor.name}\n🕒 資料時間：${formatDate(sensor.lastchange)}`,
+        parse_mode: "Markdown"
+      });
+    } catch (error) {
+      console.error('[Bot Error] /ogtest2:', error);
+      await ctx.reply('❌ 直接產圖失敗，請稍後再試。');
     }
   });
 
