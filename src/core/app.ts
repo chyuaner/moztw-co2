@@ -5,6 +5,7 @@ import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM
 import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
+import { Base, IndexPage } from './html.js';
 
 export type Variables = {
   store: IStore;
@@ -39,7 +40,7 @@ const getSensors = (c: any) => {
 
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
 app.get('/', async (c) => {
-  return c.html('<h1>摩茲工寮環境資訊</h1><p>前端頁面製作中，請參閱 <a href="/sensors">/sensors</a> (SpaceAPI) 或 <a href="/devices">/devices</a> (Original Format)</p>');
+  return c.html(IndexPage().toString());
 });
 
 app.get('/sensors', async (c) => {
