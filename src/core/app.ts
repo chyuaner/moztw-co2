@@ -7,6 +7,7 @@ import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
 import { Base, IndexPage } from './html.js';
 import { OgSensor } from './og.js';
+import { ASSETS } from "./assets.gen.js";
 
 export type Variables = {
   store: IStore;
@@ -43,6 +44,51 @@ const getSensors = (c: any) => {
     return [];
   }
 };
+
+// Helper to serve base64 assets
+const serveBase64 = (base64: string, contentType: string) => {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return {
+    body: bytes.buffer,
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=604800, immutable",
+    },
+  };
+};
+
+// Helper to get font buffer
+const getFontData = () => {
+  const binary = atob(ASSETS.font_ttf);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer;
+};
+
+/* -----------------------------------------------------------------------------
+資源檔案路由區
+----------------------------------------------------------------------------- */
+
+app.get("/favicon.png", (c) => {
+  const asset = serveBase64(ASSETS.favicon_png, "image/png");
+  return c.body(asset.body, 200, asset.headers);
+});
+
+app.get("/favicon.ico", (c) => {
+  const asset = serveBase64(ASSETS.favicon_ico, "image/x-icon");
+  return c.body(asset.body, 200, asset.headers);
+});
+
+app.get("/font.woff2", (c) => {
+  const asset = serveBase64(ASSETS.font_woff2, "font/woff2");
+  return c.body(asset.body, 200, asset.headers);
+});
 
 /* -----------------------------------------------------------------------------
 主要 Router 邏輯區
@@ -231,6 +277,12 @@ og.get('/locations/:id', async (c) => {
       {
         width: 1200,
         height: 630,
+        fonts: [{
+          name: 'sans-serif',
+          data: getFontData(),
+          style: 'normal',
+          weight: 400,
+        }],
       });
   } catch (error) {
     console.error('[OG Error]', error);

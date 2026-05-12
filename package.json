@@ -2,10 +2,11 @@
   "name": "space-info-api",
   "type": "module",
   "scripts": {
-    "dev": "npm run dev:worker",
-    "dev:worker": "wrangler dev",
-    "dev:node": "tsx src/node.ts",
-    "dev:tg": "tsx src/tg-lp.ts",
+		"build:assets": "tsx scripts/generate-assets.ts",
+    "dev": "npm run build:assets && npm run dev:worker",
+    "dev:worker": "npm run build:assets && wrangler dev",
+    "dev:node": "npm run build:assets && tsx src/node.ts",
+    "dev:tg": "npm run build:assets && tsx src/tg-lp.ts",
     "get": "tsx src/cli.ts",
     "kv:refresh": "tsx src/cf-cli.ts --refresh-meta",
     "kv:export": "tsx src/cf-cli.ts --export",
@@ -21,6 +22,7 @@
     "hono": "^4.12.17",
     "node-addon-api": "^8.7.0",
     "node-gyp": "^12.3.0",
+    "subset-font": "^2.5.0",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
