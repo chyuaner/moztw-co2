@@ -71,22 +71,45 @@ export class SwitchBot {
     const recordKey = `sensor:${this.deviceId}`;
     const prev = await this.store.get(recordKey);
 
-    const updatedTemperature = newData.temperature !== undefined ? newData.temperature : prev?.temperature;
-    const updatedHumidity = newData.humidity !== undefined ? newData.humidity : prev?.humidity;
-    const updatedCo2 = newData.co2 !== undefined ? newData.co2 : prev?.co2;
+    // Helper function to consolidate property updates
+    const getConsolidatedProperty = <K extends 'temperature' | 'humidity' | 'co2'>(
+      key: K
+    ) => {
+      const valueKey = key;
+      const lastchangeKey = `${key}_lastchange` as const;
+      const isWebhookKey = `${key}_iswebhook` as const;
+
+      if (newData[valueKey] !== undefined) {
+        return {
+          value: newData[valueKey],
+          lastchange: now,
+          iswebhook: isWebhook,
+        };
+      } else {
+        return {
+          value: prev?.[valueKey],
+          lastchange: prev?.[lastchangeKey],
+          iswebhook: prev?.[isWebhookKey],
+        };
+      }
+    };
+
+    const tempProps = getConsolidatedProperty('temperature');
+    const humProps = getConsolidatedProperty('humidity');
+    const co2Props = getConsolidatedProperty('co2');
 
     const savedata: SensorDataRecord = {
-      temperature: updatedTemperature,
-      temperature_lastchange: newData.temperature !== undefined ? now : prev?.temperature_lastchange,
-      temperature_iswebhook: newData.temperature !== undefined ? isWebhook : prev?.temperature_iswebhook,
+      temperature: tempProps.value,
+      temperature_lastchange: tempProps.lastchange,
+      temperature_iswebhook: tempProps.iswebhook,
       
-      humidity: updatedHumidity,
-      humidity_lastchange: newData.humidity !== undefined ? now : prev?.humidity_lastchange,
-      humidity_iswebhook: newData.humidity !== undefined ? isWebhook : prev?.humidity_iswebhook,
+      humidity: humProps.value,
+      humidity_lastchange: humProps.lastchange,
+      humidity_iswebhook: humProps.iswebhook,
       
-      co2: updatedCo2,
-      co2_lastchange: newData.co2 !== undefined ? now : prev?.co2_lastchange,
-      co2_iswebhook: newData.co2 !== undefined ? isWebhook : prev?.co2_iswebhook,
+      co2: co2Props.value,
+      co2_lastchange: co2Props.lastchange,
+      co2_iswebhook: co2Props.iswebhook,
       
       lastchange: shouldUpdateOverallLastchange ? time : prev?.lastchange,
       isWebhook: isWebhook,
@@ -415,4 +438,3 @@ export class SwitchBot {
   }
 
 }
-
