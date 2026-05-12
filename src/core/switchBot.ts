@@ -126,11 +126,11 @@ export class SwitchBot {
   }
 
   private async saveToStore(savedata: SensorDataRecord) {
-    if (!this.store) {
-      this.lastchange = savedata.lastchange;
-      this.data = savedata;
-      return;
-    }
+    // 提早更新記憶體快取，確保實例狀態即時同步
+    this.data = savedata;
+    this.lastchange = savedata.lastchange;
+
+    if (!this.store) return;
 
     const recordKey = `sensor:${this.deviceId}`;
     const isWebhook = savedata.isWebhook || false;
@@ -156,7 +156,6 @@ export class SwitchBot {
     // 2. 更新當前狀態 (用於 API/Bot 快速查詢)
     try {
       await this.store.put(recordKey, savedata);
-      this.data = savedata; // 更新記憶體緩存
     } catch (err) {
       console.error('[Store Error] Failed to update current record:', err);
     }
@@ -219,7 +218,7 @@ export class SwitchBot {
     const consolidated = await this.consolidate(newData);
     await this.saveToStore(consolidated);
 
-    return this.data || {};
+    return consolidated;
   }
 
   /**
