@@ -1,4 +1,4 @@
-import { Bot, InputFile } from 'grammy';
+import { Bot, InputFile, InlineKeyboard } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
 import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg } from './og.js';
@@ -82,15 +82,9 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   bot.command('co2_help', async (ctx) => {
     const messages = ['🏠 <b>摩茲工寮 其他選項說明</b>'];
     messages.push('===================================');
-    messages.push('co2 - 工寮的溫度、濕度、二氧化碳濃度監測');
-    messages.push('co2_help - 查看所有隱藏選項');
-    messages.push('inside_temperature - 室內的溫度');
-    messages.push('inside_humidity - (隱藏選項)室內的濕度');
-    messages.push('inside_co2 - (隱藏選項)室內的二氧化碳濃度');
-    messages.push('balcony_temperature - (隱藏選項)陽台的溫度');
-    messages.push('balcony_humidity - (隱藏選項)陽台的濕度');
-    messages.push('corridor_temperature - (隱藏選項)走廊的溫度');
-    messages.push('corridor_humidity - (隱藏選項)走廊的濕度');
+    messages.push('co2 - 目前的溫度、濕度、二氧化碳濃度');
+    messages.push('graph - 各項感測器的歷史圖表');
+    messages.push('co2_help - 查看所有選項');
     await ctx.reply(messages.join('\n'), { parse_mode: 'HTML' });
   });
 
@@ -147,15 +141,29 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     }
   };
 
-  bot.command('inside_temperature', (ctx) => replyWithSensorChart(ctx, 'inside', 'temperature'));
-  bot.command('inside_humidity', (ctx) => replyWithSensorChart(ctx, 'inside', 'humidity'));
-  bot.command('inside_co2', (ctx) => replyWithSensorChart(ctx, 'inside', 'co2'));
+  // 指令：/graph - 顯示圖表選擇選單
+  bot.command('graph', async (ctx) => {
+    const keyboard = new InlineKeyboard()
+      .text('🏠 室內溫度', 'graph:inside:temperature')
+      .text('🏠 室內濕度', 'graph:inside:humidity')
+      .text('🏠 室內 CO2', 'graph:inside:co2')
+      .row()
+      .text('🌳 陽台溫度', 'graph:balcony:temperature')
+      .text('🌳 陽台濕度', 'graph:balcony:humidity')
+      .row()
+      .text('🚪 走廊溫度', 'graph:corridor:temperature')
+      .text('🚪 走廊濕度', 'graph:corridor:humidity');
 
-  bot.command('balcony_temperature', (ctx) => replyWithSensorChart(ctx, 'balcony', 'temperature'));
-  bot.command('balcony_humidity', (ctx) => replyWithSensorChart(ctx, 'balcony', 'humidity'));
+    await ctx.reply('📊 請選擇欲查看的圖表：', { reply_markup: keyboard });
+  });
 
-  bot.command('corridor_temperature', (ctx) => replyWithSensorChart(ctx, 'corridor', 'temperature'));
-  bot.command('corridor_humidity', (ctx) => replyWithSensorChart(ctx, 'corridor', 'humidity'));
+  // 處理圖表選擇的回呼
+  bot.callbackQuery(/^graph:(.+):(.+)$/, async (ctx) => {
+    const [, sensorId, type] = ctx.match;
+    await ctx.answerCallbackQuery();
+    // 移除選單訊息或更新它，這裡選擇直接發送圖表
+    await replyWithSensorChart(ctx, sensorId, type as 'temperature' | 'humidity' | 'co2');
+  });
 
 
   bot.command('ogtest', async (ctx) => {
