@@ -82,9 +82,19 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   bot.command('co2_help', async (ctx) => {
     const messages = ['🏠 <b>摩茲工寮 其他選項說明</b>'];
     messages.push('===================================');
-    messages.push('co2 - 目前的溫度、濕度、二氧化碳濃度');
-    messages.push('graph - 各項感測器的歷史圖表');
-    messages.push('co2_help - 查看所有選項');
+    messages.push('/co2 - 目前的溫度、濕度、二氧化碳濃度');
+    messages.push('/graph - 各項感測器的歷史圖表');
+    messages.push('/co2_help - 查看所有選項');
+    // 隱藏指令清單 (不顯示在選單上)
+    messages.push('----------------------------------');
+    messages.push('🔧 <b>隱藏指令 (直接輸入)：</b>');
+    messages.push('/inside_temperature - 顯示「室內溫度」圖表');
+    messages.push('/inside_humidity - 顯示「室內濕度」圖表');
+    messages.push('/inside_co2 - 顯示「室內 CO2」圖表');
+    messages.push('/balcony_temperature - 顯示「陽台溫度」圖表');
+    messages.push('/balcony_humidity - 顯示「陽台濕度」圖表');
+    messages.push('/corridor_temperature - 顯示「走廊溫度」圖表');
+    messages.push('/corridor_humidity - 顯示「走廊濕度」圖表');
     await ctx.reply(messages.join('\n'), { parse_mode: 'HTML' });
   });
 
@@ -163,6 +173,21 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     await ctx.answerCallbackQuery();
     // 移除選單訊息或更新它，這裡選擇直接發送圖表
     await replyWithSensorChart(ctx, sensorId, type as 'temperature' | 'humidity' | 'co2');
+  });
+
+  // 隱藏指令：直接觸發特定圖表
+  const hiddenCommands = [
+    { command: 'inside_temperature', sensor: 'inside', type: 'temperature' },
+    { command: 'inside_humidity', sensor: 'inside', type: 'humidity' },
+    { command: 'inside_co2', sensor: 'inside', type: 'co2' },
+    { command: 'balcony_temperature', sensor: 'balcony', type: 'temperature' },
+    { command: 'balcony_humidity', sensor: 'balcony', type: 'humidity' },
+    { command: 'corridor_temperature', sensor: 'corridor', type: 'temperature' },
+    { command: 'corridor_humidity', sensor: 'corridor', type: 'humidity' },
+  ];
+
+  hiddenCommands.forEach(({ command, sensor, type }) => {
+    bot.command(command, (ctx) => replyWithSensorChart(ctx, sensor, type as any));
   });
 
 
