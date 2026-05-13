@@ -150,7 +150,7 @@ const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
             <h1 style={{ display: 'flex', fontSize: '80px', color: '#111827', marginBottom: '40px' }}>Sensor: {id}</h1>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', fontSize: '50px' }}>🌡 溫度：{temperature} °C</div>
-                <div style={{ display: 'flex', fontSize: '50pxs' }}>💧 濕度：{humidity} %</div>
+                <div style={{ display: 'flex', fontSize: '50px' }}>💧 濕度：{humidity} %</div>
                 <div style={{ display: 'flex', fontSize: '50px' }}>☁️ CO2：{co2} ppm</div>
             </div>
         </div>
