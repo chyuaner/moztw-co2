@@ -256,6 +256,9 @@ export class SwitchBot {
     const consolidated = await this.consolidate(newData);
     await this.saveToStore(consolidated);
 
+    // 同步到 ThingSpeak
+    await this.syncToThingSpeak(consolidated);
+
     return consolidated;
   }
 
