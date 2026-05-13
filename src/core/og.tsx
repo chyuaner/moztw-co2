@@ -197,6 +197,58 @@ const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
     );
 }
 
+const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
+    const parsedData = datas.map((d: any) => {
+        const ts = d.lastchange;
+        const lastchange = ts ? ts * 1000 : Date.now();
+        return {
+            x: lastchange,
+            y: d.humidity,
+            label: formatTime(lastchange)
+        };
+    });
+
+    const allX = parsedData.map((d: any) => d.x);
+    let minX = allX.length > 0 ? Math.min(...allX) : Date.now() - 3600000;
+    let maxX = allX.length > 0 ? Math.max(...allX) : Date.now();
+    if (maxX - minX < 3600000) {
+        minX = maxX - 3600000;
+    }
+    const innerWidth = 1000;
+    const innerHeight = 400;
+    const xDomain = [minX, maxX];
+
+    const allY = parsedData.map((d: any) => d.y);
+    const minY = allY.length > 0 ? Math.floor(Math.min(...allY) - 5) : 0;
+    const maxY = allY.length > 0 ? Math.ceil(Math.max(...allY) + 5) : 100;
+    const yDomain = [minY, maxY];
+
+    const xScale = scaleLinear({
+        domain: xDomain,
+        range: [0, innerWidth],
+    });
+    
+    const yScale = scaleLinear({
+        domain: yDomain,
+        range: [innerHeight, 0],
+    });
+
+    const yTicks = yScale.ticks(5);
+    const xLabels = xScale.ticks(5).map(t => ({ x: t, label: formatTime(t) }));
+
+    return (
+        <Basechart 
+            title={title}
+            xDomain={xDomain}
+            yDomain={yDomain}
+            yTicks={yTicks}
+            xLabels={xLabels}
+        >
+            {ChartHumidityLine({ data: parsedData, xScale, yScale })}
+        </Basechart>
+    );
+}
+
 const ChartTestOg = () => {
     // --- 🎨 樣式與顏色定義 (組件私有) ---
     const THEME = {
@@ -334,4 +386,4 @@ const ChartTestOg = () => {
 /* ----------------------------------------------------
 設定哪些組件要開放
 ---------------------------------------------------- */
-export {SensorOg, TemperatureChartOg, Co2ChartOg, ChartTestOg as ChartOg};
+export {SensorOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, ChartTestOg as ChartOg};
