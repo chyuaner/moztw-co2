@@ -63,7 +63,7 @@ const serveBase64 = (base64: string, contentType: string) => {
 };
 
 // Helper to get font buffer
-const getFontData = () => {
+export const getFontData = () => {
   const binary = atob(ASSETS.font_ttf);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
@@ -249,7 +249,9 @@ app.get('/locations/:id/history', async (c) => {
   }
 });
 
-// OG即時產圖區
+/* -----------------------------------------------------------------------------
+OG即時產圖區
+----------------------------------------------------------------------------- */
 const og = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
 og.get('/locations/:id', async (c) => {

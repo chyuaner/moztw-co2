@@ -1,7 +1,8 @@
 import { Bot, InputFile } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
-import { ChartOg, SensorOg } from './og.js';
+import { ChartOg, Co2ChartOg, SensorOg } from './og.js';
+import { getFontData } from './app.js';
 
 export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
   const bot = new Bot(token);
@@ -27,6 +28,17 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     return `${p('year')}/${p('month')}/${p('day')} ${p('hour')}:${p('minute')}:${p('second')}`;
   };
 
+  const ogOptions = {
+    width: 1200,
+    height: 630,
+    fonts: [{
+      name: 'sans-serif',
+      data: getFontData(),
+      style: 'normal',
+      weight: 400,
+    }],
+  };
+
   // 輔助函式：計算字串視覺顯示寬度，並向右補齊空白
   const padRight = (text: string, width: number = 22) => {
     let currentWidth = 0;
@@ -38,7 +50,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   };
 
   // 指令：/space - 顯示所有資訊
-  bot.command('co2', async (ctx) => {
+  bot.command('space', async (ctx) => {
     try {
       const sensors = getSensors();
       const messages = ['🏠 *空間目前資訊*'];
@@ -66,6 +78,38 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
     }
   });
+
+  bot.command('co2', async (ctx) => {
+    try {
+      const id = 'inside';
+      const sensors = getSensors();
+      const sensor = sensors.find((s: SwitchBot) => s.id === id);
+      if (!sensor) {
+        await ctx.reply('❌ Sensor not found');
+        return;
+      }
+
+      const messages = [];
+      const now = Math.floor(Date.now() / 1000);
+      
+      const data = await sensor.getAll();
+      messages.push(`📍 *${sensor.name}*`+'    '+`☁️ CO2：${data.co2} ppm`);
+      messages.push(`🕒 更新時間：${formatDate(sensor.lastchange || now)}`);
+
+      const historyData = await sensor.getHistoryByHours(3, 0);
+
+      const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 3 小時內的 CO2';
+      const imgRes = new ImageResponse(Co2ChartOg({ datas: historyData, title }),ogOptions);
+
+      await ctx.replyWithPhoto(new InputFile(imgRes.body), {
+        caption: messages.join('\n'), parse_mode: "Markdown"
+      });
+    } catch (error) {
+      console.error('[Bot Error] /co2:', error);
+      await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
+    }
+  });
+
 
   bot.command('ogtest', async (ctx) => {
     try {
@@ -100,11 +144,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       const { id, name } = sensor;
       const { temperature, humidity, co2 } = data;
 
-      const imgRes = new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), 
-      {
-        width: 1200,
-        height: 630,
-      });
+      const imgRes = new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), ogOptions);
 
       await ctx.replyWithPhoto(new InputFile(imgRes.body), {
         caption: `✅ 圖片已生成 (直接渲染模式)\n📍 感測器：${sensor.name}\n🕒 資料時間：${formatDate(sensor.lastchange)}`,
@@ -130,11 +170,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       const { id, name } = sensor;
       const { temperature, humidity, co2 } = data;
 
-      const imgRes = new ImageResponse(ChartOg(), 
-      {
-        width: 1200,
-        height: 630,
-      });
+      const imgRes = new ImageResponse(ChartOg(), ogOptions);
 
       await ctx.replyWithPhoto(new InputFile(imgRes.body), {
         caption: `✅ 圖片已生成 (直接渲染模式)\n📍 感測器：${sensor.name}\n🕒 資料時間：${formatDate(sensor.lastchange)}`,
