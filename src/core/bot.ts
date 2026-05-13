@@ -136,11 +136,11 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   bot.command('temperature', (ctx) => replyWithSensorChart(ctx, 'inside', 'temperature'));
   bot.command('humidity', (ctx) => replyWithSensorChart(ctx, 'inside', 'humidity'));
 
-  bot.command('temperature-balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'temperature'));
-  bot.command('humidity-balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'humidity'));
+  bot.command('temperature_balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'temperature'));
+  bot.command('humidity_balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'humidity'));
 
-  bot.command('temperature-corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'temperature'));
-  bot.command('humidity-corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'humidity'));
+  bot.command('temperature_corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'temperature'));
+  bot.command('humidity_corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'humidity'));
 
 
   bot.command('ogtest', async (ctx) => {
