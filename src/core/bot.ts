@@ -1,7 +1,7 @@
 import { Bot, InputFile } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
-import { ChartOg, Co2ChartOg, SensorOg } from './og.js';
+import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg } from './og.js';
 import { getFontData } from './app.js';
 
 export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
@@ -79,36 +79,68 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     }
   });
 
-  bot.command('co2', async (ctx) => {
+  const replyWithSensorChart = async (ctx: any, sensorId: string, type: 'temperature' | 'humidity' | 'co2') => {
     try {
-      const id = 'inside';
       const sensors = getSensors();
-      const sensor = sensors.find((s: SwitchBot) => s.id === id);
+      const sensor = sensors.find((s: SwitchBot) => s.id === sensorId);
       if (!sensor) {
-        await ctx.reply('❌ Sensor not found');
+        await ctx.reply(`❌ Sensor ${sensorId} not found`);
         return;
       }
 
-      const messages = [];
       const now = Math.floor(Date.now() / 1000);
-      
       const data = await sensor.getAll();
-      messages.push(`📍 *${sensor.name}*`+'    '+`☁️ CO2：${data.co2} ppm`);
+      
+      let valueStr = '';
+      let chartComp: any;
+      let typeLabel = '';
+
+      if (type === 'temperature') {
+        valueStr = `🌡 溫度：${data.temperature} °C`;
+        chartComp = TemperatureChartOg;
+        typeLabel = '溫度';
+      } else if (type === 'humidity') {
+        valueStr = `💧 濕度：${data.humidity} %`;
+        chartComp = HumidityChartOg;
+        typeLabel = '濕度';
+      } else {
+        valueStr = `☁️ CO2：${data.co2} ppm`;
+        chartComp = Co2ChartOg;
+        typeLabel = 'CO2';
+      }
+
+      const messages = [];
+      messages.push(`📍 *${sensor.name}*`+'    '+ valueStr);
       messages.push(`🕒 更新時間：${formatDate(sensor.lastchange || now)}`);
 
       const historyData = await sensor.getHistoryByHours(3, 0);
-
-      const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 3 小時內的 CO2';
-      const imgRes = new ImageResponse(Co2ChartOg({ datas: historyData, title }),ogOptions);
+      const title = `🏠摩茲工寮 ${sensor.name} 最近 3 小時內的 ${typeLabel}`;
+      
+      if (!ImageResponse) {
+        return await ctx.reply('❌ 目前環境不支援直接生成圖片 (ImageResponse missing)');
+      }
+      
+      const imgRes = new ImageResponse(chartComp({ datas: historyData, title }), ogOptions);
 
       await ctx.replyWithPhoto(new InputFile(imgRes.body), {
-        caption: messages.join('\n'), parse_mode: "Markdown"
+        caption: messages.join('\n'),
+        parse_mode: "Markdown"
       });
     } catch (error) {
-      console.error('[Bot Error] /co2:', error);
+      console.error(`[Bot Error] /${type}:`, error);
       await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
     }
-  });
+  };
+
+  bot.command('co2', (ctx) => replyWithSensorChart(ctx, 'inside', 'co2'));
+  bot.command('temperature', (ctx) => replyWithSensorChart(ctx, 'inside', 'temperature'));
+  bot.command('humidity', (ctx) => replyWithSensorChart(ctx, 'inside', 'humidity'));
+
+  bot.command('temperature-balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'temperature'));
+  bot.command('humidity-balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'humidity'));
+
+  bot.command('temperature-corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'temperature'));
+  bot.command('humidity-corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'humidity'));
 
 
   bot.command('ogtest', async (ctx) => {
