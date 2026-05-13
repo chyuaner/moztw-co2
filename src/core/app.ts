@@ -6,8 +6,9 @@ import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
 import { Base, IndexPage } from './html.js';
-import { OgSensor } from './og.js';
+import { OgSensor, OgChart } from './og.js';
 import { ASSETS } from "./assets.gen.js";
+import { ImageResponse } from '@cf-wasm/og';
 
 export type Variables = {
   store: IStore;
@@ -248,10 +249,9 @@ app.get('/locations/:id/history', async (c) => {
   }
 });
 
-/* -----------------------------------------------------------------------------
-OG即時產圖區
------------------------------------------------------------------------------ */
+// OG即時產圖區
 const og = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
 og.get('/locations/:id', async (c) => {
   const ImageResponse = c.get('ImageResponse');
 
@@ -287,6 +287,30 @@ og.get('/locations/:id', async (c) => {
   } catch (error) {
     console.error('[OG Error]', error);
     return c.text('無法產出 OG 圖片，請稍後再試。', 500);
+  }
+});
+
+og.get('/chart-test', async (c) => {
+  const ImageResponse = c.get('ImageResponse');
+  if (!ImageResponse) {
+    return c.text('ImageResponse not found in context', 500);
+  }
+
+  try {
+    return new ImageResponse(OgChart(), 
+      {
+        width: 1200,
+        height: 630,
+        fonts: [{
+          name: 'sans-serif',
+          data: getFontData(),
+          style: 'normal',
+          weight: 400,
+        }],
+      });
+  } catch (error) {
+    console.error('[OG Chart Error]', error);
+    return c.text('無法產出 OG 圖表，請稍後再試。', 500);
   }
 });
 
