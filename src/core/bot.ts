@@ -49,8 +49,8 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     return text + ' '.repeat(Math.max(0, width - currentWidth));
   };
 
-  // 指令：/space - 顯示所有資訊
-  bot.command('space', async (ctx) => {
+  // 指令：/co2 - 顯示所有資訊
+  bot.command('co2', async (ctx) => {
     try {
       const sensors = getSensors();
       const messages = ['🏠 *空間目前資訊*'];
@@ -132,15 +132,15 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     }
   };
 
-  bot.command('co2', (ctx) => replyWithSensorChart(ctx, 'inside', 'co2'));
-  bot.command('temperature', (ctx) => replyWithSensorChart(ctx, 'inside', 'temperature'));
-  bot.command('humidity', (ctx) => replyWithSensorChart(ctx, 'inside', 'humidity'));
+  bot.command('inside_temperature', (ctx) => replyWithSensorChart(ctx, 'inside', 'temperature'));
+  bot.command('inside_humidity', (ctx) => replyWithSensorChart(ctx, 'inside', 'humidity'));
+  bot.command('inside_co2', (ctx) => replyWithSensorChart(ctx, 'inside', 'co2'));
 
-  bot.command('temperature_balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'temperature'));
-  bot.command('humidity_balcony', (ctx) => replyWithSensorChart(ctx, 'balcony', 'humidity'));
+  bot.command('balcony_temperature', (ctx) => replyWithSensorChart(ctx, 'balcony', 'temperature'));
+  bot.command('balcony_humidity', (ctx) => replyWithSensorChart(ctx, 'balcony', 'humidity'));
 
-  bot.command('temperature_corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'temperature'));
-  bot.command('humidity_corridor', (ctx) => replyWithSensorChart(ctx, 'corridor', 'humidity'));
+  bot.command('corridor_temperature', (ctx) => replyWithSensorChart(ctx, 'corridor', 'temperature'));
+  bot.command('corridor_humidity', (ctx) => replyWithSensorChart(ctx, 'corridor', 'humidity'));
 
 
   bot.command('ogtest', async (ctx) => {
@@ -202,7 +202,16 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       const { id, name } = sensor;
       const { temperature, humidity, co2 } = data;
 
-      const imgRes = new ImageResponse(ChartOg(), ogOptions);
+      const imgRes = new ImageResponse(ChartOg(), {
+        width: 1280,
+        height: 900,
+        fonts: [{
+          name: 'sans-serif',
+          data: getFontData(),
+          style: 'normal',
+          weight: 400,
+        }],
+      });
 
       await ctx.replyWithPhoto(new InputFile(imgRes.body), {
         caption: `✅ 圖片已生成 (直接渲染模式)\n📍 感測器：${sensor.name}\n🕒 資料時間：${formatDate(sensor.lastchange)}`,
