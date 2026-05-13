@@ -53,7 +53,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   bot.command('co2', async (ctx) => {
     try {
       const sensors = getSensors();
-      const messages = ['🏠 *空間目前資訊*'];
+      const messages = ['🏠 *摩茲工寮 空間目前資訊*'];
       const now = Math.floor(Date.now() / 1000);
       
       for (const s of sensors) {
@@ -77,6 +77,21 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       console.error('[Bot Error] /co2:', error);
       await ctx.reply('❌ 無法抓取空間資訊，請稍後再試。');
     }
+  });
+
+  bot.command('co2_help', async (ctx) => {
+    const messages = ['🏠 <b>摩茲工寮 其他選項說明</b>'];
+    messages.push('===================================');
+    messages.push('co2 - 工寮的溫度、濕度、二氧化碳濃度監測');
+    messages.push('co2_help - 查看所有隱藏選項');
+    messages.push('inside_temperature - 室內的溫度');
+    messages.push('inside_humidity - (隱藏選項)室內的濕度');
+    messages.push('inside_co2 - (隱藏選項)室內的二氧化碳濃度');
+    messages.push('balcony_temperature - (隱藏選項)陽台的溫度');
+    messages.push('balcony_humidity - (隱藏選項)陽台的濕度');
+    messages.push('corridor_temperature - (隱藏選項)走廊的溫度');
+    messages.push('corridor_humidity - (隱藏選項)走廊的濕度');
+    await ctx.reply(messages.join('\n'), { parse_mode: 'HTML' });
   });
 
   const replyWithSensorChart = async (ctx: any, sensorId: string, type: 'temperature' | 'humidity' | 'co2') => {
