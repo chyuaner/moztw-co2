@@ -1,7 +1,7 @@
 import { Bot, InputFile } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
-import { OgSensor } from './og.js';
+import { ChartOg, SensorOg } from './og.js';
 
 export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
   const bot = new Bot(token);
@@ -100,7 +100,37 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       const { id, name } = sensor;
       const { temperature, humidity, co2 } = data;
 
-      const imgRes = new ImageResponse(OgSensor({id, name, temperature, humidity, co2}), 
+      const imgRes = new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), 
+      {
+        width: 1200,
+        height: 630,
+      });
+
+      await ctx.replyWithPhoto(new InputFile(imgRes.body), {
+        caption: `✅ 圖片已生成 (直接渲染模式)\n📍 感測器：${sensor.name}\n🕒 資料時間：${formatDate(sensor.lastchange)}`,
+        parse_mode: "Markdown"
+      });
+    } catch (error) {
+      console.error('[Bot Error] /ogtest2:', error);
+      await ctx.reply('❌ 直接產圖失敗，請稍後再試。');
+    }
+  });
+
+  bot.command('ogtest3', async (ctx) => {
+    try {
+      if (!ImageResponse) {
+        return await ctx.reply('❌ 目前環境不支援直接生成圖片 (ImageResponse missing)');
+      }
+      
+      const sensors = getSensors();
+      const sensor = sensors.find(s => s.id === 'inside') || sensors[0];
+      if (!sensor) return await ctx.reply('❌ 找不到感測器資訊');
+
+      const data = await sensor.getAll();
+      const { id, name } = sensor;
+      const { temperature, humidity, co2 } = data;
+
+      const imgRes = new ImageResponse(ChartOg(), 
       {
         width: 1200,
         height: 630,

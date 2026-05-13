@@ -6,7 +6,7 @@ import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
 import { Base, IndexPage } from './html.js';
-import { OgSensor, OgChart } from './og.js';
+import { SensorOg, ChartOg } from './og.js';
 import { ASSETS } from "./assets.gen.js";
 import { ImageResponse } from '@cf-wasm/og';
 
@@ -273,7 +273,7 @@ og.get('/locations/:id', async (c) => {
     const humidity = data.humidity;
     const co2 = data.co2;
 
-    return new ImageResponse(OgSensor({id, name, temperature, humidity, co2}), 
+    return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), 
       {
         width: 1200,
         height: 630,
@@ -297,7 +297,7 @@ og.get('/chart-test', async (c) => {
   }
 
   try {
-    return new ImageResponse(OgChart(), 
+    return new ImageResponse(ChartOg(), 
       {
         width: 1200,
         height: 630,
