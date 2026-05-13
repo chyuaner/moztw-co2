@@ -1,5 +1,5 @@
 import { scaleLinear } from "@visx/scale";
-import { CTArea, CTChart, CTLine, CTScatter, Basechart } from "./baseOg";
+import { CTArea, CTChart, CTLine, CTScatter } from "./baseOg";
 import { SensorDataRecord } from "./switchBot";
 
 /* ----------------------------------------------------
@@ -85,26 +85,23 @@ const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
     );
 }
 
-const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
+// Basechart: 共用的圖表版面框架與資料處理邏輯
+const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: any) => {
+    // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
-        // SwitchBot 歷史紀錄的 lastchange 單位是秒，需乘上 1000 轉為 JS 的毫秒
-        const ts = d.lastchange; // 若需觀測數值最初變更時間，可改為 d.temperature_lastchange
+        const ts = d.lastchange;
         const lastchange = ts ? ts * 1000 : Date.now();
         return {
             x: lastchange,
-            y: d.temperature,
+            y: d[yKey],
             label: formatTime(lastchange)
         };
     });
 
+    // 2. X 軸範圍 (保底 1 小時)
     const allX = parsedData.map((d: any) => d.x);
-
-    // 取得資料的真實時間範圍
     let minX = allX.length > 0 ? Math.min(...allX) : Date.now() - 3600000;
     let maxX = allX.length > 0 ? Math.max(...allX) : Date.now();
-
-    // 如果資料時間跨度不到 1 小時 (或是只有單點)，我們強制讓圖表至少撐開 1 小時的跨度
-    // 但如果資料超過 1 小時 (例如 6 小時、12 小時)，就會自然顯示真實的範圍！
     if (maxX - minX < 3600000) {
         minX = maxX - 3600000;
     }
@@ -112,11 +109,13 @@ const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) 
     const innerHeight = 400;
     const xDomain = [minX, maxX];
 
+    // 3. Y 軸範圍與動態緩衝
     const allY = parsedData.map((d: any) => d.y);
-    const minY = allY.length > 0 ? Math.floor(Math.min(...allY) - 2) : 0;
-    const maxY = allY.length > 0 ? Math.ceil(Math.max(...allY) + 2) : 50;
+    const minY = allY.length > 0 ? Math.floor(Math.min(...allY) - yBuffer[0]) : 0;
+    const maxY = allY.length > 0 ? Math.ceil(Math.max(...allY) + yBuffer[1]) : 100;
     const yDomain = [minY, maxY];
 
+    // 4. 建立比例尺
     const xScale = scaleLinear({
         domain: xDomain,
         range: [0, innerWidth],
@@ -127,126 +126,68 @@ const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) 
         range: [innerHeight, 0],
     });
 
-    // 讓 scale 自動幫我們算出漂亮且間隔均勻的 Y 軸刻度與 X 軸時間標籤，避免資料密集時字體重疊
+    // 5. 刻度計算
     const yTicks = yScale.ticks(5);
     const xLabels = xScale.ticks(5).map(t => ({ x: t, label: formatTime(t) }));
 
+    // --- 🎨 樣式與顏色定義 (組件私有) ---
+    const THEME = {
+        background: '#ffffff',
+        titleText: '#1e293b',
+        frameBorder: '#e2e8f0',
+        gridLine: '#f1f5f9',
+        axisText: '#64748b',
+        axisFontSize: '24px',
+        xAxisFontSize: '20px',
+    };
+
+    const styles = {
+        pageWrapper: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: THEME.background,
+            width: '1200px',
+            height: '630px',
+            fontFamily: 'sans-serif',
+        },
+        title: {
+            display: 'flex',
+            fontSize: '48px',
+            marginBottom: '40px',
+            fontWeight: 'bold',
+            color: THEME.titleText,
+        },
+    };
+
     return (
-        <Basechart 
-            title={title}
-            xDomain={xDomain}
-            yDomain={yDomain}
-            yTicks={yTicks}
-            xLabels={xLabels}
-        >
-            {ChartTemperatureLine({ data: parsedData, xScale, yScale })}
-        </Basechart>
+        <div style={styles.pageWrapper as any}>
+            <h1 style={styles.title as any}>{title}</h1>
+            <CTChart
+                width={innerWidth}
+                height={innerHeight}
+                domain={{ x: xDomain, y: yDomain }}
+                yTicks={yTicks}
+                xLabels={xLabels}
+                theme={THEME}
+            >
+                {renderChart({ data: parsedData, xScale, yScale })}
+            </CTChart>
+        </div>
     );
+};
+
+const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
+    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={[2, 2]} renderChart={ChartTemperatureLine} />;
 }
 
 const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
-    const parsedData = datas.map((d: any) => {
-        const ts = d.lastchange;
-        const lastchange = ts ? ts * 1000 : Date.now();
-        return {
-            x: lastchange,
-            y: d.co2,
-            label: formatTime(lastchange)
-        };
-    });
-
-    const allX = parsedData.map((d: any) => d.x);
-    let minX = allX.length > 0 ? Math.min(...allX) : Date.now() - 3600000;
-    let maxX = allX.length > 0 ? Math.max(...allX) : Date.now();
-    if (maxX - minX < 3600000) {
-        minX = maxX - 3600000;
-    }
-    const innerWidth = 1000;
-    const innerHeight = 400;
-    const xDomain = [minX, maxX];
-
-    const allY = parsedData.map((d: any) => d.y);
-    // CO2 數值通常較大 (400-2000)，給予較大的緩衝空間
-    const minY = allY.length > 0 ? Math.floor(Math.min(...allY) - 50) : 400;
-    const maxY = allY.length > 0 ? Math.ceil(Math.max(...allY) + 50) : 1000;
-    const yDomain = [minY, maxY];
-
-    const xScale = scaleLinear({
-        domain: xDomain,
-        range: [0, innerWidth],
-    });
-    
-    const yScale = scaleLinear({
-        domain: yDomain,
-        range: [innerHeight, 0],
-    });
-
-    const yTicks = yScale.ticks(5);
-    const xLabels = xScale.ticks(5).map(t => ({ x: t, label: formatTime(t) }));
-
-    return (
-        <Basechart 
-            title={title}
-            xDomain={xDomain}
-            yDomain={yDomain}
-            yTicks={yTicks}
-            xLabels={xLabels}
-        >
-            {ChartCo2Line({ data: parsedData, xScale, yScale })}
-        </Basechart>
-    );
+    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={[50, 50]} renderChart={ChartCo2Line} />;
 }
 
 const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
-    const parsedData = datas.map((d: any) => {
-        const ts = d.lastchange;
-        const lastchange = ts ? ts * 1000 : Date.now();
-        return {
-            x: lastchange,
-            y: d.humidity,
-            label: formatTime(lastchange)
-        };
-    });
-
-    const allX = parsedData.map((d: any) => d.x);
-    let minX = allX.length > 0 ? Math.min(...allX) : Date.now() - 3600000;
-    let maxX = allX.length > 0 ? Math.max(...allX) : Date.now();
-    if (maxX - minX < 3600000) {
-        minX = maxX - 3600000;
-    }
-    const innerWidth = 1000;
-    const innerHeight = 400;
-    const xDomain = [minX, maxX];
-
-    const allY = parsedData.map((d: any) => d.y);
-    const minY = allY.length > 0 ? Math.floor(Math.min(...allY) - 5) : 0;
-    const maxY = allY.length > 0 ? Math.ceil(Math.max(...allY) + 5) : 100;
-    const yDomain = [minY, maxY];
-
-    const xScale = scaleLinear({
-        domain: xDomain,
-        range: [0, innerWidth],
-    });
-    
-    const yScale = scaleLinear({
-        domain: yDomain,
-        range: [innerHeight, 0],
-    });
-
-    const yTicks = yScale.ticks(5);
-    const xLabels = xScale.ticks(5).map(t => ({ x: t, label: formatTime(t) }));
-
-    return (
-        <Basechart 
-            title={title}
-            xDomain={xDomain}
-            yDomain={yDomain}
-            yTicks={yTicks}
-            xLabels={xLabels}
-        >
-            {ChartHumidityLine({ data: parsedData, xScale, yScale })}
-        </Basechart>
-    );
+    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={[5, 5]} renderChart={ChartHumidityLine} />;
 }
 
 const ChartTestOg = () => {
