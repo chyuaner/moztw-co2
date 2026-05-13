@@ -17,7 +17,72 @@ export const OgSensor = ({ id, name, temperature, humidity, co2 }: any) => {
 }
 
 export const OgChart = () => {
-    // --- 1. 資料準備 ---
+    // --- 🎨 樣式與顏色定義 (組件私有) ---
+    const THEME = {
+        background: '#ffffff',
+        titleText: '#1e293b',
+        frameBorder: '#e2e8f0',
+        gridLine: '#f1f5f9',
+        mainLine: '#2563eb',
+        mainLineWeight: 5,
+        dataDot: '#ef4444',
+        dataDotStroke: '#ffffff',
+        dataDotRadius: 10,
+        axisText: '#64748b',
+        axisFontSize: '24px',
+        xAxisFontSize: '20px',
+    };
+
+    const styles = {
+        pageWrapper: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: THEME.background,
+            width: '1200px',
+            height: '630px',
+            fontFamily: 'sans-serif',
+        },
+        title: {
+            display: 'flex',
+            fontSize: '48px',
+            marginBottom: '40px',
+            fontWeight: 'bold',
+            color: THEME.titleText,
+        },
+        yAxisWrapper: {
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            marginRight: '15px',
+            marginLeft: '-45px',
+        },
+        tickLabel: {
+            display: 'flex',
+            height: '0px',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            fontSize: THEME.axisFontSize,
+            color: THEME.axisText,
+        },
+        xAxisWrapper: {
+            display: 'flex',
+            position: 'relative',
+            marginTop: '5px',
+        },
+        xLabel: {
+            display: 'flex',
+            position: 'absolute',
+            width: '100px',
+            marginLeft: '-50px',
+            justifyContent: 'center',
+            fontSize: THEME.xAxisFontSize,
+            color: THEME.axisText,
+        }
+    };
+
+    // --- 📊 資料與運算邏輯 ---
     const now = Date.now();
     const formatTime = (ts: number) => {
         const d = new Date(ts);
@@ -26,7 +91,6 @@ export const OgChart = () => {
         return `${mm}:${ss}`;
     };
 
-    // x: 決定物理位置, y: 決定數值高度, label: 下方顯示文字
     const data = [
         { x: now,               y: 0,   label: formatTime(now) },
         { x: now + 45000,       y: 45,  label: formatTime(now + 45000) },
@@ -36,28 +100,23 @@ export const OgChart = () => {
         { x: now + 300000,      y: 100, label: formatTime(now + 300000) },
     ];
 
-    // --- 2. 佈局尺寸定義 ---
-    const innerWidth = 1000;  // 灰色框框的寬度
-    const innerHeight = 400; // 灰色框框的高度
-    const padding = 20;      // 預留給圓點的安全空間 (防止邊界 clipping)
+    const innerWidth = 1000;
+    const innerHeight = 400;
+    const padding = 20;
 
     const svgWidth = innerWidth + padding * 2;
     const svgHeight = innerHeight + padding * 2;
+    const yAxisWidth = 80;
 
-    const yAxisWidth = 80;   // Y 軸文字區域寬度
-    const xAxisHeight = 60;  // X 軸文字區域高度
-
-    // --- 3. 比例尺換算 (將數據轉換為像素座標) ---
     const xScale = scaleLinear({
         domain: [Math.min(...data.map(d => d.x)), Math.max(...data.map(d => d.x))],
         range: [0, innerWidth], 
     });
     const yScale = scaleLinear({
         domain: [0, 100],
-        range: [innerHeight, 0], // SVG 0 在上方，所以 100 對應 0, 0 對應 innerHeight
+        range: [innerHeight, 0],
     });
 
-    // 折線路徑生成器
     const pathGenerator = line<any>()
         .x(d => xScale(d.x))
         .y(d => yScale(d.y));
@@ -65,75 +124,35 @@ export const OgChart = () => {
     const yTicks = [100, 75, 50, 25, 0];
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', width: '1200px', height: '630px', fontFamily: 'sans-serif' }}>
-            <h1 style={{ display: 'flex', fontSize: '48px', marginBottom: '40px', fontWeight: 'bold' }}>Custom Manual Chart</h1>
+        <div style={styles.pageWrapper}>
+            <h1 style={styles.title}>Encapsulated Styles Chart</h1>
             
-            {/* 圖表主容器 (橫向 Flex) */}
             <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
-                
-                {/* Y 軸數字欄 (利用 flex 的 space-between 自動垂直對齊) */}
-                <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    justifyContent: 'space-between', 
-                    width: `${yAxisWidth}px`, 
-                    height: `${innerHeight}px`,
-                    marginLeft: '-45px',
-                    marginRight: '15px',
-                    marginTop: `${padding}px` // 抵消 SVG 的 Padding 確保對齊
-                }}>
+                <div style={{ ...styles.yAxisWrapper, width: `${yAxisWidth}px`, height: `${innerHeight}px`, marginTop: `${padding}px` }}>
                     {yTicks.map(t => (
-                        <div key={t} style={{ display: 'flex', height: '0px', alignItems: 'center', justifyContent: 'flex-end', fontSize: '24px', color: '#64748b' }}>
-                            {t}
-                        </div>
+                        <div key={t} style={styles.tickLabel}>{t}</div>
                     ))}
                 </div>
 
-                {/* 繪圖與 X 軸容器 */}
                 <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                    
-                    {/* SVG 繪圖層 (寬高包含 Padding 以容納邊界圓點) */}
-                    <div style={{ 
-                        display: 'flex', 
-                        width: `${svgWidth}px`, 
-                        height: `${svgHeight}px`, 
-                        marginLeft: `-${padding}px`, 
-                        marginTop: `-${padding}px`
-                    }}>
+                    <div style={{ display: 'flex', width: `${svgWidth}px`, height: `${svgHeight}px`, marginLeft: `-${padding}px`, marginTop: `-${padding}px` }}>
                         <svg width={svgWidth} height={svgHeight}>
                             <g transform={`translate(${padding}, ${padding})`}>
-                                {/* 灰色參考框框 (精準 0-100 範圍) */}
-                                <rect x={0} y={0} width={innerWidth} height={innerHeight} fill="none" stroke="#e2e8f0" strokeWidth="2" />
-
-                                {/* 內部水平格線 */}
+                                <rect x={0} y={0} width={innerWidth} height={innerHeight} fill="none" stroke={THEME.frameBorder} strokeWidth="2" />
                                 {[75, 50, 25].map(t => (
-                                    <line key={t} x1={0} x2={innerWidth} y1={yScale(t)} y2={yScale(t)} stroke="#f1f5f9" strokeWidth="2" />
+                                    <line key={t} x1={0} x2={innerWidth} y1={yScale(t)} y2={yScale(t)} stroke={THEME.gridLine} strokeWidth="2" />
                                 ))}
-
-                                {/* 藍色路徑線 */}
-                                <path d={pathGenerator(data) || ''} fill="none" stroke="#2563eb" strokeWidth="5" />
-                                
-                                {/* 紅色數據圓點 */}
+                                <path d={pathGenerator(data) || ''} fill="none" stroke={THEME.mainLine} strokeWidth={THEME.mainLineWeight} />
                                 {data.map((d, i) => (
-                                    <circle key={i} cx={xScale(d.x)} cy={yScale(d.y)} r="10" fill="#ef4444" stroke="white" strokeWidth="2" />
+                                    <circle key={i} cx={xScale(d.x)} cy={yScale(d.y)} r={THEME.dataDotRadius} fill={THEME.dataDot} stroke={THEME.dataDotStroke} strokeWidth="2" />
                                 ))}
                             </g>
                         </svg>
                     </div>
 
-                    {/* X 軸標籤 (直接對齊數據點的 x 座標) */}
-                    <div style={{ display: 'flex', position: 'relative', width: `${innerWidth}px`, height: `${xAxisHeight}px`, marginTop: `5px` }}>
+                    <div style={{ ...styles.xAxisWrapper, width: `${innerWidth}px`, height: '60px' }}>
                         {data.map((d, i) => (
-                            <div key={i} style={{ 
-                                display: 'flex', 
-                                position: 'absolute', 
-                                left: `${xScale(d.x)}px`, 
-                                width: '100px', 
-                                marginLeft: '-50px', 
-                                justifyContent: 'center', 
-                                fontSize: '20px', 
-                                color: '#64748b' 
-                            }}>
+                            <div key={i} style={{ ...styles.xLabel, left: `${xScale(d.x)}px` }}>
                                 {d.label}
                             </div>
                         ))}
