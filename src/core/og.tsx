@@ -3,20 +3,28 @@ import React from 'react';
 import { scaleLinear } from '@visx/scale';
 import { line } from 'd3-shape';
 
-export const OgSensor = ({ id, name, temperature, humidity, co2 }: any) => {
+/* ----------------------------------------------------
+Helper區
+---------------------------------------------------- */
+
+
+/* ----------------------------------------------------
+Page 區
+---------------------------------------------------- */
+const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '80px', backgroundColor: '#f9fafb', width: '1200px', height: '630px', fontFamily: 'sans-serif' }}>
             <h1 style={{ display: 'flex', fontSize: '80px', color: '#111827', marginBottom: '40px' }}>Sensor: {id}</h1>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div style={{ display: 'flex', fontSize: '50px' }}>🌡 溫度：{temperature} °C</div>
-                <div style={{ display: 'flex', fontSize: '50px' }}>💧 濕度：{humidity} %</div>
+                <div style={{ display: 'flex', fontSize: '50pxs' }}>💧 濕度：{humidity} %</div>
                 <div style={{ display: 'flex', fontSize: '50px' }}>☁️ CO2：{co2} ppm</div>
             </div>
         </div>
     );
 }
 
-export const OgChart = () => {
+const ChartOg = () => {
     // --- 🎨 樣式與顏色定義 (組件私有) ---
     const THEME = {
         background: '#ffffff',
@@ -162,3 +170,8 @@ export const OgChart = () => {
         </div>
     );
 }
+
+/* ----------------------------------------------------
+設定哪些組件要開放
+---------------------------------------------------- */
+export {SensorOg, ChartOg};
