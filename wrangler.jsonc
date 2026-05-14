@@ -9,9 +9,7 @@
 	// "vars": {
 	//   "MY_VAR": "my-variable"
 	// },
-	"build": {
-		"command": "npm run build:assets"
-	},
+
 	"kv_namespaces": [
 		{
 			"binding": "SENSOR_KV",

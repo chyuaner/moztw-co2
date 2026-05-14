@@ -1,5 +1,5 @@
 # Generated Assets
-src/core/assets.gen.ts
+src/gen/
 
 # prod
 dist/

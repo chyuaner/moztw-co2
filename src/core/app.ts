@@ -5,9 +5,9 @@ import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM
 import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
-import { Base, IndexPage } from './html.js';
+import { Base, IndexPage, Dashboard } from './html.js';
 import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg } from './og.js';
-import { ASSETS } from "./assets.gen.js";
+import { ASSETS } from '../gen/assets.gen.js';
 import { ImageResponse } from '@cf-wasm/og';
 
 export type Variables = {
@@ -91,15 +91,21 @@ app.get("/font.woff2", (c) => {
   return c.body(asset.body, 200, asset.headers);
 });
 
+app.get("/style.css", (c) => {
+  const asset = serveBase64(ASSETS.style_css, "text/css");
+  return c.body(asset.body, 200, asset.headers);
+});
+
+app.get("/client.js", (c) => {
+  const asset = serveBase64(ASSETS.client_js, "application/javascript");
+  return c.body(asset.body, 200, asset.headers);
+});
+
 /* -----------------------------------------------------------------------------
 主要 Router 邏輯區
 ----------------------------------------------------------------------------- */
 
 // 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
-app.get('/', async (c) => {
-  return c.html(IndexPage().toString());
-});
-
 app.get('/sensors', async (c) => {
   try {
     const sensors = getSensors(c);
@@ -421,6 +427,19 @@ og.get('/chart-test', async (c) => {
 });
 
 app.route('/og', og);
+
+/* -----------------------------------------------------------------------------
+前端操作介面區
+----------------------------------------------------------------------------- */
+app.get('/', async (c) => {
+  const sensors = getSensors(c);
+  const locations = await Promise.all(sensors.map(async s => {
+    const current = await s.getAll();
+    return { id: s.id, name: s.name, ...current };
+  }));
+  return c.html(Dashboard({ locations }) as any);
+});
+
 
 /* -----------------------------------------------------------------------------
 接入整合外部服務區

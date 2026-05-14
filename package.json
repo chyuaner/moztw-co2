@@ -2,8 +2,10 @@
   "name": "space-info-api",
   "type": "module",
   "scripts": {
-    "build:assets": "tsx scripts/generate-assets.ts",
-    "dev": "npm run build:assets && npm run dev:worker",
+    "build:client": "vite build",
+    "build:css": "tailwindcss -i ./src/core/input.css -o ./src/gen/output.css --minify",
+    "build:assets": "npm run build:client && npm run build:css && tsx scripts/generate-assets.ts",
+    "dev": "npm run dev:worker",
     "dev:worker": "npm run build:assets && wrangler dev",
     "dev:node": "npm run build:assets && tsx src/node.ts",
     "dev:tg": "npm run build:assets && tsx src/tg-lp.ts",
@@ -11,7 +13,7 @@
     "kv:refresh": "tsx src/cf-cli.ts --refresh-meta",
     "kv:export": "tsx src/cf-cli.ts --export",
     "kv:import": "tsx src/cf-cli.ts --import",
-    "deploy": "wrangler deploy --minify",
+    "deploy": "npm run build:assets && wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
@@ -28,9 +30,14 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "subset-font": "^2.5.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "victory": "^37.3.6"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "tailwindcss": "^4.3.0",
+    "vite": "^8.0.12",
     "wrangler": "^4.90.1"
   },
   "author": "Yuan Chiu",
