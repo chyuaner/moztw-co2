@@ -3,6 +3,32 @@ import { CTArea, CTChart, CTLine, CTScatter } from "./baseOg";
 import { SensorDataRecord } from "./switchBot";
 
 /* ----------------------------------------------------
+Config區
+---------------------------------------------------- */
+const CONFIG = {
+    // Data Series Colors
+    mainLine: '#424242ff',
+    mainLine_temperature: '#ef4444',
+    mainLine_humidity: '#2563eb',
+    mainLine_co2: '#10b981',
+
+    // Areas
+    mainLineArea_temperature: null,
+    mainLineArea_humidity: null,
+    mainLineArea_co2: 'rgba(16, 185, 129, 0.2)',
+
+    // Markers & Lines
+    mainLineWeight: 5,
+    dotRadius: 8,
+    dotStroke: '#ffffff',
+
+    // Y-Axis Buffers
+    buffer_temperature: [1, 1],
+    buffer_humidity: [5, 5],
+    buffer_co2: [50, 50],
+};
+
+/* ----------------------------------------------------
 Helper區
 ---------------------------------------------------- */
 const formatTime = (ts: number) => {
@@ -16,16 +42,17 @@ const formatTime = (ts: number) => {
 
 const ChartTemperatureLine = ({ data, xScale, yScale }: any) => {
     const THEME = {
-        mainLine: '#ef4444', // Red for Temperature
-        mainLineWeight: 5,
-        // MainArea: 'rgba(16, 185, 129, 0.2)',
-        dataDot: '#ef4444',
-        dataDotStroke: '#ffffff',
-        dataDotRadius: 8,
+        mainLine: CONFIG.mainLine_temperature, // Red for Temperature
+        mainLineWeight: CONFIG.mainLineWeight,
+        ...(CONFIG.mainLineArea_temperature ? { mainLineArea: CONFIG.mainLineArea_temperature } : {}),
+        dataDot: CONFIG.mainLine_temperature,
+        dataDotStroke: CONFIG.dotStroke,
+        dataDotRadius: CONFIG.dotRadius,
     };
 
     return (
         <g>
+            {THEME.mainLineArea && CTArea({ data, xKey: "x", yKey: "y", fill: THEME.mainLineArea, xScale, yScale })}
             {CTLine({ data, xKey: "x", yKey: "y", stroke: THEME.mainLine, strokeWidth: THEME.mainLineWeight, xScale, yScale })}
             {CTScatter({ data, xKey: "x", yKey: "y", r: THEME.dataDotRadius, fill: THEME.mainLine, stroke: THEME.dataDotStroke, strokeWidth: 2, xScale, yScale })}
         </g>
@@ -34,16 +61,17 @@ const ChartTemperatureLine = ({ data, xScale, yScale }: any) => {
 
 const ChartHumidityLine = ({ data, xScale, yScale }: any) => {
     const THEME = {
-        mainLine: '#2563eb', // Blue for Humidity
-        mainLineWeight: 5,
-        // MainArea: 'rgba(16, 185, 129, 0.2)',
-        dataDot: '#2563eb',
-        dataDotStroke: '#ffffff',
-        dataDotRadius: 8,
+        mainLine: CONFIG.mainLine_humidity, // Blue for Humidity
+        mainLineWeight: CONFIG.mainLineWeight,
+        ...(CONFIG.mainLineArea_humidity ? { mainLineArea: CONFIG.mainLineArea_humidity } : {}),
+        dataDot: CONFIG.mainLine_humidity,
+        dataDotStroke: CONFIG.dotStroke,
+        dataDotRadius: CONFIG.dotRadius,
     };
 
     return (
         <g>
+            {THEME.mainLineArea && CTArea({ data, xKey: "x", yKey: "y", fill: THEME.mainLineArea, xScale, yScale })}
             {CTLine({ data, xKey: "x", yKey: "y", stroke: THEME.mainLine, strokeWidth: THEME.mainLineWeight, xScale, yScale })}
             {CTScatter({ data, xKey: "x", yKey: "y", r: THEME.dataDotRadius, fill: THEME.mainLine, stroke: THEME.dataDotStroke, strokeWidth: 2, xScale, yScale })}
         </g>
@@ -52,17 +80,17 @@ const ChartHumidityLine = ({ data, xScale, yScale }: any) => {
 
 const ChartCo2Line = ({ data, xScale, yScale }: any) => {
     const THEME = {
-        mainLine: '#10b981', // Green for CO2
-        mainLineWeight: 5,
-        MainArea: 'rgba(16, 185, 129, 0.2)',
-        dataDot: '#10b981',
-        dataDotStroke: '#ffffff',
-        dataDotRadius: 8,
+        mainLine: CONFIG.mainLine_co2, // Green for CO2
+        mainLineWeight: CONFIG.mainLineWeight,
+        mainLineArea: CONFIG.mainLineArea_co2,
+        dataDot: CONFIG.mainLine_co2,
+        dataDotStroke: CONFIG.dotStroke,
+        dataDotRadius: CONFIG.dotRadius,
     };
 
     return (
         <g>
-            {CTArea({ data, xKey: "x", yKey: "y", fill: THEME.MainArea, xScale, yScale })}
+            {THEME.mainLineArea && CTArea({ data, xKey: "x", yKey: "y", fill: THEME.mainLineArea, xScale, yScale })}
             {CTLine({ data, xKey: "x", yKey: "y", stroke: THEME.mainLine, strokeWidth: THEME.mainLineWeight, xScale, yScale })}
             {CTScatter({ data, xKey: "x", yKey: "y", r: THEME.dataDotRadius, fill: THEME.mainLine, stroke: THEME.dataDotStroke, strokeWidth: 2, xScale, yScale })}
         </g>
@@ -179,17 +207,20 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
 };
 
 const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={[1, 1]} renderChart={ChartTemperatureLine} />;
-}
-
-const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={[50, 50]} renderChart={ChartCo2Line} />;
+    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} renderChart={ChartTemperatureLine} />;
 }
 
 const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={[5, 5]} renderChart={ChartHumidityLine} />;
+    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} renderChart={ChartHumidityLine} />;
 }
 
+const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
+    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} renderChart={ChartCo2Line} />;
+}
+
+/* ----------------------------------------------------
+測試用
+---------------------------------------------------- */
 const ChartTestOg = () => {
     // --- 🎨 樣式與顏色定義 (組件私有) ---
     const THEME = {
@@ -197,17 +228,17 @@ const ChartTestOg = () => {
         titleText: '#1e293b',
         frameBorder: '#e2e8f0',
         gridLine: '#f1f5f9',
-        mainLine: '#2563eb', // Blue for Humidity
-        mainLineWeight: 5,
-        dataDot: '#ef4444',
-        dataDotStroke: '#ffffff',
-        dataDotRadius: 10,
+        mainLine: CONFIG.mainLine_humidity, // Blue for Humidity
+        mainLineWeight: CONFIG.mainLineWeight,
+        dataDot: CONFIG.mainLine_temperature,
+        dataDotStroke: CONFIG.dotStroke,
+        dataDotRadius: CONFIG.dotRadius,
         axisText: '#64748b',
         axisFontSize: '24px',
         xAxisFontSize: '20px',
-        co2Line: '#10b981', // Green for CO2
-        co2Area: 'rgba(16, 185, 129, 0.2)',
-        tempLine: '#ef4444', // Red for Temp
+        co2Line: CONFIG.mainLine_co2, // Green for CO2
+        co2Area: CONFIG.mainLineArea_co2,
+        tempLine: CONFIG.mainLine_temperature, // Red for Temp
     };
 
     const styles = {
