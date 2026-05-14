@@ -132,8 +132,8 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       messages.push(`📍 *${sensor.name}*`+'    '+ valueStr);
       messages.push(`🕒 更新時間：${formatDate(sensor.lastchange || now)}`);
 
-      const historyData = await sensor.getHistoryByHours(3, 0);
-      const title = `🏠摩茲工寮 ${sensor.name} 最近 3 小時內的 ${typeLabel}`;
+      const historyData = await sensor.getHistoryByHours(6, 0);
+      const title = `🏠摩茲工寮 ${sensor.name} 最近 6 小時內的 ${typeLabel}`;
       
       if (!ImageResponse) {
         return await ctx.reply('❌ 目前環境不支援直接生成圖片 (ImageResponse missing)');

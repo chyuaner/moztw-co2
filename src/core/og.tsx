@@ -21,7 +21,7 @@ const ChartTemperatureLine = ({ data, xScale, yScale }: any) => {
         // MainArea: 'rgba(16, 185, 129, 0.2)',
         dataDot: '#ef4444',
         dataDotStroke: '#ffffff',
-        dataDotRadius: 10,
+        dataDotRadius: 8,
     };
 
     return (
@@ -39,7 +39,7 @@ const ChartHumidityLine = ({ data, xScale, yScale }: any) => {
         // MainArea: 'rgba(16, 185, 129, 0.2)',
         dataDot: '#2563eb',
         dataDotStroke: '#ffffff',
-        dataDotRadius: 10,
+        dataDotRadius: 8,
     };
 
     return (
@@ -57,7 +57,7 @@ const ChartCo2Line = ({ data, xScale, yScale }: any) => {
         MainArea: 'rgba(16, 185, 129, 0.2)',
         dataDot: '#10b981',
         dataDotStroke: '#ffffff',
-        dataDotRadius: 10,
+        dataDotRadius: 8,
     };
 
     return (
@@ -179,7 +179,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
 };
 
 const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={[2, 2]} renderChart={ChartTemperatureLine} />;
+    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={[1, 1]} renderChart={ChartTemperatureLine} />;
 }
 
 const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {

@@ -306,8 +306,8 @@ og.get('/locations/:id/temperature', async (c) => {
       return c.text('Device not found', 404);
     }
 
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 3 小時內的溫度';
-    const historyData = await sensor.getHistoryByHours(3, 0);
+    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的溫度';
+    const historyData = await sensor.getHistoryByHours(6, 0);
 
     return new ImageResponse(TemperatureChartOg({ datas: historyData, title }), 
       {
@@ -341,8 +341,8 @@ og.get('/locations/:id/humidity', async (c) => {
       return c.text('Device not found', 404);
     }
 
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 3 小時內的濕度';
-    const historyData = await sensor.getHistoryByHours(3, 0);
+    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的濕度';
+    const historyData = await sensor.getHistoryByHours(6, 0);
 
     return new ImageResponse(HumidityChartOg({ datas: historyData, title }), 
       {
@@ -376,8 +376,8 @@ og.get('/locations/:id/co2', async (c) => {
       return c.text('Device not found', 404);
     }
 
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 3 小時內的 CO2';
-    const historyData = await sensor.getHistoryByHours(3, 0);
+    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的 CO2';
+    const historyData = await sensor.getHistoryByHours(6, 0);
 
     return new ImageResponse(Co2ChartOg({ datas: historyData, title }), 
       {
