@@ -70,7 +70,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     }
   });
 
-  bot.command('co2_help', async (ctx) => {
+  const replyWithHelp = async (ctx: any) => {
     const messages = ['🏠 <b>摩茲工寮 其他選項說明</b>'];
     messages.push('===================================');
     messages.push('/co2 - 目前的溫度、濕度、二氧化碳濃度');
@@ -79,14 +79,21 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     // 隱藏指令清單 (不顯示在選單上)
     messages.push('----------------------------------');
     messages.push('🔧 <b>隱藏指令 (直接輸入)：</b>');
+    messages.push('/inside - 顯示「室內溫度、濕度」圖表');
     messages.push('/inside_temperature - 顯示「室內溫度」圖表');
     messages.push('/inside_humidity - 顯示「室內濕度」圖表');
     messages.push('/inside_co2 - 顯示「室內 CO2」圖表');
+    messages.push('/balcony - 顯示「陽台溫度、濕度」圖表');
     messages.push('/balcony_temperature - 顯示「陽台溫度」圖表');
     messages.push('/balcony_humidity - 顯示「陽台濕度」圖表');
+    messages.push('/corridor - 顯示「走廊溫度、濕度」圖表');
     messages.push('/corridor_temperature - 顯示「走廊溫度」圖表');
     messages.push('/corridor_humidity - 顯示「走廊濕度」圖表');
     await ctx.reply(messages.join('\n'), { parse_mode: 'HTML' });
+  };
+
+  bot.command('co2_help', async (ctx) => {
+    await replyWithHelp(ctx);
   });
 
   const replyWithSensorChart = async (ctx: any, sensorId: string, type: 'temperature' | 'humidity' | 'co2'| 'temperature_humidity') => {
@@ -150,17 +157,20 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   bot.command('graph', async (ctx) => {
     const keyboard = new InlineKeyboard()
       .text('🏠 室內', 'graph:inside:temperature_humidity')
-      .text('🏠 室內溫度', 'graph:inside:temperature')
-      .text('🏠 室內濕度', 'graph:inside:humidity')
+      // .text('🏠 室內溫度', 'graph:inside:temperature')
+      // .text('🏠 室內濕度', 'graph:inside:humidity')
       .text('🏠 室內 CO2', 'graph:inside:co2')
       .row()
       .text('🌳 陽台', 'graph:balcony:temperature_humidity')
-      .text('🌳 陽台溫度', 'graph:balcony:temperature')
-      .text('🌳 陽台濕度', 'graph:balcony:humidity')
+      // .text('🌳 陽台溫度', 'graph:balcony:temperature')
+      // .text('🌳 陽台濕度', 'graph:balcony:humidity')
       .row()
       .text('🚪 走廊', 'graph:corridor:temperature_humidity')
-      .text('🚪 走廊溫度', 'graph:corridor:temperature')
-      .text('🚪 走廊濕度', 'graph:corridor:humidity');
+      // .text('🚪 走廊溫度', 'graph:corridor:temperature')
+      // .text('🚪 走廊濕度', 'graph:corridor:humidity');
+      .row()
+      .text('其他所有選項', 'help')
+
 
     await ctx.reply('📊 請選擇欲查看的圖表：', { reply_markup: keyboard });
   });
@@ -173,14 +183,22 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     await replyWithSensorChart(ctx, sensorId, type as any);
   });
 
+  // 處理說明選單的回呼
+  bot.callbackQuery('help', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await replyWithHelp(ctx);
+  });
+
   // 隱藏指令：直接觸發特定圖表
   const hiddenCommands = [
-    { command: 'inside_temperature_humidity', sensor: 'inside', type: 'temperature_humidity' },
+    { command: 'inside', sensor: 'inside', type: 'temperature_humidity' },
     { command: 'inside_temperature', sensor: 'inside', type: 'temperature' },
     { command: 'inside_humidity', sensor: 'inside', type: 'humidity' },
     { command: 'inside_co2', sensor: 'inside', type: 'co2' },
+    { command: 'balcony', sensor: 'balcony', type: 'temperature_humidity' },
     { command: 'balcony_temperature', sensor: 'balcony', type: 'temperature' },
     { command: 'balcony_humidity', sensor: 'balcony', type: 'humidity' },
+    { command: 'corridor', sensor: 'corridor', type: 'temperature_humidity' },
     { command: 'corridor_temperature', sensor: 'corridor', type: 'temperature' },
     { command: 'corridor_humidity', sensor: 'corridor', type: 'humidity' },
   ];
