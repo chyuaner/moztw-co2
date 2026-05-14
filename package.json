@@ -1,5 +1,5 @@
 {
-  "name": "space-info-api",
+  "name": "moztw-co2",
   "type": "module",
   "scripts": {
     "build:client": "vite build",
