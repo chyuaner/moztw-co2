@@ -89,7 +89,7 @@ https://api.telegram.org/bot<TG_TOKEN>/getWebhookInfo
 
 #### 綁定Webhook
 ```
-https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>
+https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>/bot/<TG_TOKEN>
 ```
 
 #### 解除綁定Webhook （回歸Long Polling模式）
