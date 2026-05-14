@@ -1,5 +1,5 @@
 # Generated Assets
-src/gen/
+gen/
 
 # prod
 dist/

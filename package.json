@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "build:client": "vite build",
-    "build:css": "tailwindcss -i ./src/core/input.css -o ./src/gen/output.css --minify",
+    "build:css": "tailwindcss -i ./src/core/input.css -o ./gen/output.css --minify",
     "build:assets": "npm run build:client && npm run build:css && tsx scripts/generate-assets.ts",
     "dev": "npm run dev:worker",
     "dev:worker": "npm run build:assets && wrangler dev",

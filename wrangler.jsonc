@@ -9,6 +9,12 @@
 	// "vars": {
 	//   "MY_VAR": "my-variable"
 	// },
+	"build": {
+		"command": "npm run build:assets",
+		"watch_dir": "non-existent-folder"
+	},
+
+
 
 	"kv_namespaces": [
 		{

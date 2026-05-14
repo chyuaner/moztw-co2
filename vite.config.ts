@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'src/gen/dist/client',
+    outDir: 'gen/dist/client',
     emptyOutDir: true,
     rollupOptions: {
       input: 'src/core/frontend/main.tsx',

@@ -7,7 +7,7 @@ import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
 import { Base, IndexPage, Dashboard } from './html.js';
 import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg } from './og.js';
-import { ASSETS } from '../gen/assets.gen.js';
+import { ASSETS } from '../../gen/assets.gen.js';
 import { ImageResponse } from '@cf-wasm/og';
 
 export type Variables = {

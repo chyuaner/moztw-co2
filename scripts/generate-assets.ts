@@ -5,7 +5,7 @@ import subsetFont from 'subset-font';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
-const OUTPUT_FILE = path.join(ROOT, 'src/gen/assets.gen.ts');
+const OUTPUT_FILE = path.join(ROOT, 'gen/assets.gen.ts');
 
 /**
  * 自動從原始碼中提取所有出現過的字元，用於字體子集化
@@ -40,8 +40,8 @@ function collectTextFromFiles(): string {
 const ASSET_CONFIG = [
   { key: 'favicon', path: 'src/core/favicon.png', generateIco: true },
   { key: 'font', path: 'src/core/font.ttf', subset: true },
-  { key: 'style', path: 'src/gen/output.css' },
-  { key: 'client', path: 'src/gen/dist/client/client.js' },
+  { key: 'style', path: 'gen/output.css' },
+  { key: 'client', path: 'gen/dist/client/client.js' },
 ];
 
 /**
@@ -119,6 +119,7 @@ ${Object.entries(results).map(([key, val]) => `  ${key}: "${val}",`).join('\n')}
     }
   }
 
+  fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
   fs.writeFileSync(OUTPUT_FILE, content);
   console.log(`✅ Assets generated to ${OUTPUT_FILE}`);
 }
