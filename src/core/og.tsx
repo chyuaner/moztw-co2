@@ -119,7 +119,7 @@ const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
 }
 
 // Basechart: 共用的圖表版面框架與資料處理邏輯
-const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yRange = null, yColor, renderChart }: any) => {
+const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yRange = null, yColor, yLabel, renderChart }: any) => {
     // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
         const ts = d.lastchange;
@@ -211,6 +211,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yRange = null, y
                 theme={THEME}
                 yAxisStyle={styles.yAxis}
                 yAxisTextColor={yColor}
+                yAxisLabel={yLabel}
             >
                 {renderChart({ data: parsedData, xScale, yScale })}
             </CTChart>
@@ -219,7 +220,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yRange = null, y
 };
 
 // DualAxisBaseChart: 支援雙 Y 軸的圖表框架
-const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yRange1 = null, yColor1, yKey2, yBuffer2, yRange2 = null, yColor2, renderChart }: any) => {
+const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yRange1 = null, yColor1, yLabel1, yKey2, yBuffer2, yRange2 = null, yColor2, yLabel2, renderChart }: any) => {
     // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
         const ts = d.lastchange;
@@ -320,6 +321,8 @@ const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yRange1 = null,
                 yAxisStyleRight={styles.yAxisRight}
                 yAxisTextColor={yColor1}
                 yAxisTextColorRight={yColor2}
+                yAxisLabel={yLabel1}
+                yAxisLabelRight={yLabel2}
             >
                 {renderChart({ data: parsedData, xScale, yScale1, yScale2 })}
             </CTChart>
@@ -338,15 +341,15 @@ const ChartTemperatureHumidityLine = ({ data, xScale, yScale1, yScale2 }: any) =
 };
 
 const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} yRange={CONFIG.range_temperature} yColor={CONFIG.mainLine_temperature} renderChart={ChartTemperatureLine} />;
+    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} yRange={CONFIG.range_temperature} yColor={CONFIG.mainLine_temperature} yLabel="溫度 (°C)" renderChart={ChartTemperatureLine} />;
 }
 
 const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} yRange={CONFIG.range_humidity} yColor={CONFIG.mainLine_humidity} renderChart={ChartHumidityLine} />;
+    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} yRange={CONFIG.range_humidity} yColor={CONFIG.mainLine_humidity} yLabel="濕度 (%)" renderChart={ChartHumidityLine} />;
 }
 
 const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} yRange={CONFIG.range_co2} yColor={CONFIG.mainLine_co2} renderChart={ChartCo2Line} />;
+    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} yRange={CONFIG.range_co2} yColor={CONFIG.mainLine_co2} yLabel="CO2 (ppm)" renderChart={ChartCo2Line} />;
 }
 
 const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humidity History" }: any) => {
@@ -358,10 +361,12 @@ const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humid
             yBuffer1={CONFIG.buffer_temperature} 
             yRange1={CONFIG.range_temperature}
             yColor1={CONFIG.mainLine_temperature}
+            yLabel1="溫度 (°C)"
             yKey2="humidity" 
             yBuffer2={CONFIG.buffer_humidity} 
             yRange2={CONFIG.range_humidity}
             yColor2={CONFIG.mainLine_humidity}
+            yLabel2="濕度 (%)"
             renderChart={ChartTemperatureHumidityLine} 
         />
     );

@@ -60,6 +60,8 @@ export const CTChart = ({
     chartStyle = {},
     yAxisTextColor = null,
     yAxisTextColorRight = null,
+    yAxisLabel = null,
+    yAxisLabelRight = null,
     children
 }: any) => {
     const svgWidth = width + padding * 2;
@@ -84,7 +86,28 @@ export const CTChart = ({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
-            {/* Left Y Axis */}
+            {/* Left Y Axis Label */}
+            {yAxisLabel ? (
+                <div style={{
+                    display: 'flex',
+                    width: '40px',
+                    height: `${height}px`,
+                    marginTop: `${padding}px`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        transform: 'rotate(-90deg)',
+                        whiteSpace: 'nowrap',
+                        fontSize: theme.axisFontSize,
+                        color: yAxisTextColor || theme.axisText,
+                        fontWeight: 'bold',
+                    }}>{yAxisLabel}</div>
+                </div>
+            ) : null}
+
+            {/* Left Y Axis Ticks */}
             <div style={{ 
                 display: 'flex',
                 position: 'relative',
@@ -148,7 +171,7 @@ export const CTChart = ({
                 ) : null}
             </div>
 
-            {/* Right Y Axis */}
+            {/* Right Y Axis Ticks */}
             {yScaleRight ? (
                 <div style={{ 
                     display: 'flex',
@@ -172,6 +195,27 @@ export const CTChart = ({
                             fontWeight: yAxisTextColorRight ? 'bold' : 'normal',
                         }}>{t}</div>
                     ))}
+                </div>
+            ) : null}
+
+            {/* Right Y Axis Label */}
+            {yAxisLabelRight ? (
+                <div style={{
+                    display: 'flex',
+                    width: '40px',
+                    height: `${height}px`,
+                    marginTop: `${padding}px`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <div style={{
+                        display: 'flex',
+                        transform: 'rotate(90deg)',
+                        whiteSpace: 'nowrap',
+                        fontSize: theme.axisFontSize,
+                        color: yAxisTextColorRight || theme.axisText,
+                        fontWeight: 'bold',
+                    }}>{yAxisLabelRight}</div>
                 </div>
             ) : null}
         </div>
