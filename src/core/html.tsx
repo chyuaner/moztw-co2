@@ -55,6 +55,61 @@ export const JsonRender: FC<{ value: unknown }> = ({ value }) => {
 }
 
 /* ----------------------------------------------------
+Component 區
+---------------------------------------------------- */
+const RoomCard: FC<{ location: any, index: number }> = ({ location, index }) => {
+  const hasCo2 = location.co2 !== undefined;
+  const leftBgColors = ['bg-sky-50', 'bg-green-50', 'bg-orange-50'];
+  const leftBgClass = leftBgColors[index % 3];
+
+  return (
+    <div id={`room-card-${location.id}`} className="bg-white border border-gray-200 rounded-xl mb-5 flex overflow-hidden shadow-sm h-[280px]">
+      <div className={`w-[120px] flex flex-col items-center justify-center p-5 border-r border-gray-200 shrink-0 ${leftBgClass}`}>
+        {html(ROOM_ICONS[index % 3])}
+        <h2 className="mt-3 mb-1 text-lg text-slate-800 font-bold">{location.name}</h2>
+        {hasCo2 && <div className="text-xs text-violet-500 bg-violet-100 px-2 py-0.5 rounded mt-2">有 CO2 監測</div>}
+      </div>
+      
+      <div className="grow p-2.5 relative min-w-0 flex items-center justify-center">
+        {/* JS enabled chart container */}
+        <div id={`chart-container-${location.id}`} data-location={`${location.id}`} data-has-co2={`${hasCo2}`} className="w-full h-full absolute inset-0 z-10"></div>
+        {/* Fallback image when JS is disabled */}
+        <noscript>
+          <img src={`/og/locations/${location.id}/temperature`} alt="Chart Fallback" className="w-full h-full object-contain max-h-[260px] opacity-80" />
+        </noscript>
+      </div>
+      
+      <div className="w-[180px] border-l border-gray-200 p-5 flex flex-col justify-center gap-3 shrink-0 bg-neutral-50 z-20">
+        <div className="text-xs text-gray-500 mb-1 text-center">目前數值 <span className="current-time"></span></div>
+        <div className="rounded-lg p-3 text-center bg-red-50 text-red-500">
+          <div>
+            <span className="val-temp text-2xl font-bold">{location.temperature?.toFixed(1) || '--'}</span>
+            <span className="text-xs ml-0.5">°C</span>
+          </div>
+          <div className="text-xs mt-1 opacity-80">溫度</div>
+        </div>
+        <div className="rounded-lg p-3 text-center bg-blue-50 text-blue-500">
+          <div>
+            <span className="val-hum text-2xl font-bold">{location.humidity?.toFixed(0) || '--'}</span>
+            <span className="text-xs ml-0.5">%</span>
+          </div>
+          <div className="text-xs mt-1 opacity-80">濕度</div>
+        </div>
+        {hasCo2 && (
+          <div className="rounded-lg p-3 text-center bg-violet-50 text-violet-500">
+            <div>
+              <span className="val-co2 text-2xl font-bold">{location.co2 || '--'}</span>
+              <span className="text-xs ml-0.5">ppm</span>
+            </div>
+            <div className="text-xs mt-1 opacity-80">CO2</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ----------------------------------------------------
 Layout區
 ---------------------------------------------------- */
 export interface BaseData {
@@ -165,57 +220,5 @@ export const Dashboard: FC<{ locations: any[] }> = ({ locations }) => {
         </div>
       </div>
     </Base>
-  );
-};
-
-const RoomCard: FC<{ location: any, index: number }> = ({ location, index }) => {
-  const hasCo2 = location.co2 !== undefined;
-  const leftBgColors = ['bg-sky-50', 'bg-green-50', 'bg-orange-50'];
-  const leftBgClass = leftBgColors[index % 3];
-
-  return (
-    <div id={`room-card-${location.id}`} className="bg-white border border-gray-200 rounded-xl mb-5 flex overflow-hidden shadow-sm h-[280px]">
-      <div className={`w-[120px] flex flex-col items-center justify-center p-5 border-r border-gray-200 shrink-0 ${leftBgClass}`}>
-        {html(ROOM_ICONS[index % 3])}
-        <h2 className="mt-3 mb-1 text-lg text-slate-800 font-bold">{location.name}</h2>
-        {hasCo2 && <div className="text-xs text-violet-500 bg-violet-100 px-2 py-0.5 rounded mt-2">有 CO2 監測</div>}
-      </div>
-      
-      <div className="grow p-2.5 relative min-w-0 flex items-center justify-center">
-        {/* JS enabled chart container */}
-        <div id={`chart-container-${location.id}`} data-location={`${location.id}`} data-has-co2={`${hasCo2}`} className="w-full h-full absolute inset-0 z-10"></div>
-        {/* Fallback image when JS is disabled */}
-        <noscript>
-          <img src={`/og/locations/${location.id}/temperature`} alt="Chart Fallback" className="w-full h-full object-contain max-h-[260px] opacity-80" />
-        </noscript>
-      </div>
-      
-      <div className="w-[180px] border-l border-gray-200 p-5 flex flex-col justify-center gap-3 shrink-0 bg-neutral-50 z-20">
-        <div className="text-xs text-gray-500 mb-1 text-center">目前數值 <span className="current-time"></span></div>
-        <div className="rounded-lg p-3 text-center bg-red-50 text-red-500">
-          <div>
-            <span className="val-temp text-2xl font-bold">{location.temperature?.toFixed(1) || '--'}</span>
-            <span className="text-xs ml-0.5">°C</span>
-          </div>
-          <div className="text-xs mt-1 opacity-80">溫度</div>
-        </div>
-        <div className="rounded-lg p-3 text-center bg-blue-50 text-blue-500">
-          <div>
-            <span className="val-hum text-2xl font-bold">{location.humidity?.toFixed(0) || '--'}</span>
-            <span className="text-xs ml-0.5">%</span>
-          </div>
-          <div className="text-xs mt-1 opacity-80">濕度</div>
-        </div>
-        {hasCo2 && (
-          <div className="rounded-lg p-3 text-center bg-violet-50 text-violet-500">
-            <div>
-              <span className="val-co2 text-2xl font-bold">{location.co2 || '--'}</span>
-              <span className="text-xs ml-0.5">ppm</span>
-            </div>
-            <div className="text-xs mt-1 opacity-80">CO2</div>
-          </div>
-        )}
-      </div>
-    </div>
   );
 };
