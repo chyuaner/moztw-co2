@@ -252,9 +252,8 @@ og.get('/locations/:id', async (c) => {
   }
 });
 
-og.get('/locations/:id/temperature', async (c) => {
+const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity' | 'co2' | 'temperature_humidity') => {
   const ImageResponse = c.get('ImageResponse');
-
   if (!ImageResponse) {
     return c.text('ImageResponse not found in context', 500);
   }
@@ -267,130 +266,46 @@ og.get('/locations/:id/temperature', async (c) => {
       return c.text('Device not found', 404);
     }
 
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的溫度';
-    const historyData = await sensor.getHistoryByHours(6, 0);
+    let chartComp: any;
+    let typeLabel = '';
 
-    return new ImageResponse(TemperatureChartOg({ datas: historyData, title }), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
-  } catch (error) {
-    console.error('[OG Temperature Chart Error]', error);
-    return c.text('無法產出 OG 溫度圖表，請稍後再試。', 500);
-  }
-});
-
-og.get('/locations/:id/humidity', async (c) => {
-  const ImageResponse = c.get('ImageResponse');
-
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
-  }
-
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return c.text('Device not found', 404);
+    if (type === 'temperature_humidity') {
+      chartComp = TemperatureHumidityChartOg;
+      typeLabel = '溫濕度';
+    } else if (type === 'temperature') {
+      chartComp = TemperatureChartOg;
+      typeLabel = '溫度';
+    } else if (type === 'humidity') {
+      chartComp = HumidityChartOg;
+      typeLabel = '濕度';
+    } else {
+      chartComp = Co2ChartOg;
+      typeLabel = 'CO2';
     }
 
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的濕度';
+    const title = `🏠摩茲工寮 ${sensor.name} 最近 6 小時內的${typeLabel}`;
     const historyData = await sensor.getHistoryByHours(6, 0);
 
-    return new ImageResponse(HumidityChartOg({ datas: historyData, title }), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
+    return new ImageResponse(chartComp({ datas: historyData, title }), {
+      width: 1200,
+      height: 630,
+      fonts: [{
+        name: 'sans-serif',
+        data: getFontData(),
+        style: 'normal',
+        weight: 400,
+      }],
+    });
   } catch (error) {
-    console.error('[OG Humidity Chart Error]', error);
-    return c.text('無法產出 OG 濕度圖表，請稍後再試。', 500);
+    console.error(`[OG ${type} Chart Error]`, error);
+    return c.text(`無法產出 OG ${type} 圖表，請稍後再試。`, 500);
   }
-});
+};
 
-og.get('/locations/:id/temperature_humidity', async (c) => {
-  const ImageResponse = c.get('ImageResponse');
-
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
-  }
-
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return c.text('Device not found', 404);
-    }
-
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的溫濕度';
-    const historyData = await sensor.getHistoryByHours(6, 0);
-
-    return new ImageResponse(TemperatureHumidityChartOg({ datas: historyData, title }), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
-  } catch (error) {
-    console.error('[OG Temperature & Humidity Chart Error]', error);
-    return c.text('無法產出 OG 溫濕度圖表，請稍後再試。', 500);
-  }
-});
-
-og.get('/locations/:id/co2', async (c) => {
-  const ImageResponse = c.get('ImageResponse');
-
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
-  }
-
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return c.text('Device not found', 404);
-    }
-
-    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的 CO2';
-    const historyData = await sensor.getHistoryByHours(6, 0);
-
-    return new ImageResponse(Co2ChartOg({ datas: historyData, title }), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
-  } catch (error) {
-    console.error('[OG CO2 Chart Error]', error);
-    return c.text('無法產出 OG CO2 圖表，請稍後再試。', 500);
-  }
-});
+og.get('/locations/:id/temperature', (c) => renderSensorChartResponse(c, 'temperature'));
+og.get('/locations/:id/humidity', (c) => renderSensorChartResponse(c, 'humidity'));
+og.get('/locations/:id/temperature_humidity', (c) => renderSensorChartResponse(c, 'temperature_humidity'));
+og.get('/locations/:id/co2', (c) => renderSensorChartResponse(c, 'co2'));
 
 og.get('/chart-test', async (c) => {
   const ImageResponse = c.get('ImageResponse');
