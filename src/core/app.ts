@@ -6,7 +6,7 @@ import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM
 import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
-import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg } from './og.js';
+import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg } from './og.js';
 import { ASSETS } from '../../gen/assets.gen.js';
 import { ImageResponse } from '@cf-wasm/og';
 
@@ -319,6 +319,41 @@ og.get('/locations/:id/humidity', async (c) => {
   } catch (error) {
     console.error('[OG Humidity Chart Error]', error);
     return c.text('無法產出 OG 濕度圖表，請稍後再試。', 500);
+  }
+});
+
+og.get('/locations/:id/temperature_humidity', async (c) => {
+  const ImageResponse = c.get('ImageResponse');
+
+  if (!ImageResponse) {
+    return c.text('ImageResponse not found in context', 500);
+  }
+
+  try {
+    const id = c.req.param('id');
+    const sensors = getSensors(c);
+    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    if (!sensor) {
+      return c.text('Device not found', 404);
+    }
+
+    const title = '🏠摩茲工寮 ' + sensor.name + ' 最近 6 小時內的溫濕度';
+    const historyData = await sensor.getHistoryByHours(6, 0);
+
+    return new ImageResponse(TemperatureHumidityChartOg({ datas: historyData, title }), 
+      {
+        width: 1200,
+        height: 630,
+        fonts: [{
+          name: 'sans-serif',
+          data: getFontData(),
+          style: 'normal',
+          weight: 400,
+        }],
+      });
+  } catch (error) {
+    console.error('[OG Temperature & Humidity Chart Error]', error);
+    return c.text('無法產出 OG 溫濕度圖表，請稍後再試。', 500);
   }
 });
 

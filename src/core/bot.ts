@@ -1,7 +1,7 @@
 import { Bot, InputFile, InlineKeyboard } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
-import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg } from './og.js';
+import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg, TemperatureHumidityChartOg } from './og.js';
 import { getFontData } from './app.js';
 
 export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
@@ -98,7 +98,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     await ctx.reply(messages.join('\n'), { parse_mode: 'HTML' });
   });
 
-  const replyWithSensorChart = async (ctx: any, sensorId: string, type: 'temperature' | 'humidity' | 'co2') => {
+  const replyWithSensorChart = async (ctx: any, sensorId: string, type: 'temperature' | 'humidity' | 'co2'| 'temperature_humidity') => {
     try {
       const sensors = getSensors();
       const sensor = sensors.find((s: SwitchBot) => s.id === sensorId);
@@ -114,7 +114,11 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       let chartComp: any;
       let typeLabel = '';
 
-      if (type === 'temperature') {
+      if (type === 'temperature_humidity') {
+        valueStr = `🌡 溫度：${data.temperature} °C 💧 濕度：${data.humidity} %`;
+        chartComp = TemperatureHumidityChartOg;
+        typeLabel = '溫度與濕度';
+      } else if (type === 'temperature') {
         valueStr = `🌡 溫度：${data.temperature} °C`;
         chartComp = TemperatureChartOg;
         typeLabel = '溫度';
@@ -154,13 +158,16 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
   // 指令：/graph - 顯示圖表選擇選單
   bot.command('graph', async (ctx) => {
     const keyboard = new InlineKeyboard()
+      .text('🏠 室內', 'graph:inside:temperature_humidity')
       .text('🏠 室內溫度', 'graph:inside:temperature')
       .text('🏠 室內濕度', 'graph:inside:humidity')
       .text('🏠 室內 CO2', 'graph:inside:co2')
       .row()
+      .text('🌳 陽台', 'graph:balcony:temperature_humidity')
       .text('🌳 陽台溫度', 'graph:balcony:temperature')
       .text('🌳 陽台濕度', 'graph:balcony:humidity')
       .row()
+      .text('🚪 走廊', 'graph:corridor:temperature_humidity')
       .text('🚪 走廊溫度', 'graph:corridor:temperature')
       .text('🚪 走廊濕度', 'graph:corridor:humidity');
 
@@ -172,11 +179,12 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     const [, sensorId, type] = ctx.match;
     await ctx.answerCallbackQuery();
     // 移除選單訊息或更新它，這裡選擇直接發送圖表
-    await replyWithSensorChart(ctx, sensorId, type as 'temperature' | 'humidity' | 'co2');
+    await replyWithSensorChart(ctx, sensorId, type as any);
   });
 
   // 隱藏指令：直接觸發特定圖表
   const hiddenCommands = [
+    { command: 'inside_temperature_humidity', sensor: 'inside', type: 'temperature_humidity' },
     { command: 'inside_temperature', sensor: 'inside', type: 'temperature' },
     { command: 'inside_humidity', sensor: 'inside', type: 'humidity' },
     { command: 'inside_co2', sensor: 'inside', type: 'co2' },

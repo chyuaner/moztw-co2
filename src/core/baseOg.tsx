@@ -52,6 +52,7 @@ export const CTChart = ({
     yAxisWidth = 80,
     domain,
     yTicks = [],
+    yTicksRight = [],
     xLabels = [],
     theme,
     children
@@ -68,6 +69,11 @@ export const CTChart = ({
         domain: domain.y,
         range: [height, 0],
     });
+
+    const yScaleRight = yTicksRight.length > 0 ? scaleLinear({
+        domain: domain.yRight || [0, 100],
+        range: [height, 0],
+    }) : null;
 
     const gridTicks = yTicks.filter((t: number) => t !== domain.y[0] && t !== domain.y[1]);
 
@@ -110,7 +116,7 @@ export const CTChart = ({
                     </svg>
                 </div>
 
-                {xLabels.length > 0 && (
+                {xLabels.length > 0 ? (
                     <div style={{ 
                         display: 'flex',
                         position: 'relative',
@@ -133,8 +139,33 @@ export const CTChart = ({
                             </div>
                         ))}
                     </div>
-                )}
+                ) : null}
             </div>
+
+            {yScaleRight ? (
+                <div style={{ 
+                    display: 'flex',
+                    position: 'relative',
+                    marginLeft: '15px',
+                    width: `${yAxisWidth}px`, 
+                    height: `${height}px`, 
+                    marginTop: `${padding}px` 
+                }}>
+                    {yTicksRight.map((t: number) => (
+                        <div key={t} style={{
+                            display: 'flex',
+                            position: 'absolute',
+                            top: `${yScaleRight(t)}px`,
+                            width: '100%',
+                            height: '0px',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start',
+                            fontSize: theme.axisFontSize,
+                            color: theme.axisText,
+                        }}>{t}</div>
+                    ))}
+                </div>
+            ) : null}
         </div>
     );
 };

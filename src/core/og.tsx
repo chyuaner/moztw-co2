@@ -206,6 +206,111 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
     );
 };
 
+// DualAxisBaseChart: 支援雙 Y 軸的圖表框架
+const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yKey2, yBuffer2, renderChart }: any) => {
+    // 1. 資料解析與預處理
+    const parsedData = datas.map((d: any) => {
+        const ts = d.lastchange;
+        const lastchange = ts ? ts * 1000 : Date.now();
+        return {
+            x: lastchange,
+            y1: d[yKey1],
+            y2: d[yKey2],
+            label: formatTime(lastchange)
+        };
+    });
+
+    // 2. X 軸範圍 (保底 1 小時)
+    const allX = parsedData.map((d: any) => d.x);
+    let minX = allX.length > 0 ? Math.min(...allX) : Date.now() - 3600000;
+    let maxX = allX.length > 0 ? Math.max(...allX) : Date.now();
+    if (maxX - minX < 3600000) {
+        minX = maxX - 3600000;
+    }
+    const innerWidth = 1000;
+    const innerHeight = 400;
+    const xDomain = [minX, maxX];
+
+    // 3. Y1 軸範圍 (Left)
+    const allY1 = parsedData.map((d: any) => d.y1);
+    const minY1 = allY1.length > 0 ? Math.floor(Math.min(...allY1) - yBuffer1[0]) : 0;
+    const maxY1 = allY1.length > 0 ? Math.ceil(Math.max(...allY1) + yBuffer1[1]) : 100;
+    const yDomain1 = [minY1, maxY1];
+
+    // 4. Y2 軸範圍 (Right)
+    const allY2 = parsedData.map((d: any) => d.y2);
+    const minY2 = allY2.length > 0 ? Math.floor(Math.min(...allY2) - yBuffer2[0]) : 0;
+    const maxY2 = allY2.length > 0 ? Math.ceil(Math.max(...allY2) + yBuffer2[1]) : 100;
+    const yDomain2 = [minY2, maxY2];
+
+    // 5. 建立比例尺
+    const xScale = scaleLinear({ domain: xDomain, range: [0, innerWidth] });
+    const yScale1 = scaleLinear({ domain: yDomain1, range: [innerHeight, 0] });
+    const yScale2 = scaleLinear({ domain: yDomain2, range: [innerHeight, 0] });
+
+    // 6. 刻度計算
+    const yTicks1 = yScale1.ticks(5);
+    const yTicks2 = yScale2.ticks(5);
+    const xLabels = xScale.ticks(5).map(t => ({ x: t, label: formatTime(t) }));
+
+    const THEME = {
+        background: '#ffffff',
+        titleText: '#1e293b',
+        frameBorder: '#e2e8f0',
+        gridLine: '#f1f5f9',
+        axisText: '#64748b',
+        axisFontSize: '24px',
+        xAxisFontSize: '20px',
+    };
+
+    const styles = {
+        pageWrapper: {
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: THEME.background,
+            width: '1200px',
+            height: '630px',
+            fontFamily: 'sans-serif',
+        },
+        title: {
+            display: 'flex',
+            fontSize: '48px',
+            marginBottom: '40px',
+            fontWeight: 'bold',
+            color: THEME.titleText,
+        },
+    };
+
+    return (
+        <div style={styles.pageWrapper as any}>
+            <h1 style={styles.title as any}>{title}</h1>
+            <CTChart
+                width={innerWidth}
+                height={innerHeight}
+                domain={{ x: xDomain, y: yDomain1, yRight: yDomain2 }}
+                yTicks={yTicks1}
+                yTicksRight={yTicks2}
+                xLabels={xLabels}
+                theme={THEME}
+            >
+                {renderChart({ data: parsedData, xScale, yScale1, yScale2 })}
+            </CTChart>
+        </div>
+    );
+};
+
+
+const ChartTemperatureHumidityLine = ({ data, xScale, yScale1, yScale2 }: any) => {
+    return (
+        <g>
+            {ChartTemperatureLine({ data: data.map((d: any) => ({ x: d.x, y: d.y1 })), xScale, yScale: yScale1 })}
+            {ChartHumidityLine({ data: data.map((d: any) => ({ x: d.x, y: d.y2 })), xScale, yScale: yScale2 })}
+        </g>
+    );
+};
+
 const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
     return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} renderChart={ChartTemperatureLine} />;
 }
@@ -216,6 +321,20 @@ const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
 
 const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
     return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} renderChart={ChartCo2Line} />;
+}
+
+const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humidity History" }: any) => {
+    return (
+        <DualAxisBaseChart 
+            title={title} 
+            datas={datas} 
+            yKey1="temperature" 
+            yBuffer1={CONFIG.buffer_temperature} 
+            yKey2="humidity" 
+            yBuffer2={CONFIG.buffer_humidity} 
+            renderChart={ChartTemperatureHumidityLine} 
+        />
+    );
 }
 
 /* ----------------------------------------------------
@@ -358,4 +477,4 @@ const ChartTestOg = () => {
 /* ----------------------------------------------------
 設定哪些組件要開放
 ---------------------------------------------------- */
-export {SensorOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, ChartTestOg as ChartOg};
+export {SensorOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ChartTestOg as ChartOg};
