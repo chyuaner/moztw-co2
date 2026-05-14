@@ -22,10 +22,15 @@ const CONFIG = {
     dotRadius: 8,
     dotStroke: '#ffffff',
 
-    // Y-Axis Buffers
+    // Y-Axis Buffers (動態縮放時的上下緩衝)
     buffer_temperature: [1, 1],
     buffer_humidity: [5, 5],
     buffer_co2: [50, 50],
+
+    // Y-Axis Ranges (固定範圍，若設定則優先於 buffer)
+    range_temperature: null as [number, number] | null,
+    range_humidity: [0, 100] as [number, number] | null,
+    range_co2: null as [number, number] | null,
 };
 
 /* ----------------------------------------------------
@@ -114,7 +119,7 @@ const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
 }
 
 // Basechart: 共用的圖表版面框架與資料處理邏輯
-const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yColor, renderChart }: any) => {
+const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yRange = null, yColor, renderChart }: any) => {
     // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
         const ts = d.lastchange;
@@ -139,9 +144,10 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yColor, renderCh
 
     // 3. Y 軸範圍與動態緩衝
     const allY = parsedData.map((d: any) => d.y);
-    const minY = allY.length > 0 ? Math.floor(Math.min(...allY) - yBuffer[0]) : 0;
-    const maxY = allY.length > 0 ? Math.ceil(Math.max(...allY) + yBuffer[1]) : 100;
-    const yDomain = [minY, maxY];
+    const yDomain = yRange || [
+        allY.length > 0 ? Math.floor(Math.min(...allY) - (yBuffer ? yBuffer[0] : 0)) : 0,
+        allY.length > 0 ? Math.ceil(Math.max(...allY) + (yBuffer ? yBuffer[1] : 0)) : 100
+    ];
 
     // 4. 建立比例尺
     const xScale = scaleLinear({
@@ -213,7 +219,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yColor, renderCh
 };
 
 // DualAxisBaseChart: 支援雙 Y 軸的圖表框架
-const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yColor1, yKey2, yBuffer2, yColor2, renderChart }: any) => {
+const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yRange1 = null, yColor1, yKey2, yBuffer2, yRange2 = null, yColor2, renderChart }: any) => {
     // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
         const ts = d.lastchange;
@@ -239,15 +245,17 @@ const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yColor1, yKey2,
 
     // 3. Y1 軸範圍 (Left)
     const allY1 = parsedData.map((d: any) => d.y1);
-    const minY1 = allY1.length > 0 ? Math.floor(Math.min(...allY1) - yBuffer1[0]) : 0;
-    const maxY1 = allY1.length > 0 ? Math.ceil(Math.max(...allY1) + yBuffer1[1]) : 100;
-    const yDomain1 = [minY1, maxY1];
+    const yDomain1 = yRange1 || [
+        allY1.length > 0 ? Math.floor(Math.min(...allY1) - (yBuffer1 ? yBuffer1[0] : 0)) : 0,
+        allY1.length > 0 ? Math.ceil(Math.max(...allY1) + (yBuffer1 ? yBuffer1[1] : 0)) : 100
+    ];
 
     // 4. Y2 軸範圍 (Right)
     const allY2 = parsedData.map((d: any) => d.y2);
-    const minY2 = allY2.length > 0 ? Math.floor(Math.min(...allY2) - yBuffer2[0]) : 0;
-    const maxY2 = allY2.length > 0 ? Math.ceil(Math.max(...allY2) + yBuffer2[1]) : 100;
-    const yDomain2 = [minY2, maxY2];
+    const yDomain2 = yRange2 || [
+        allY2.length > 0 ? Math.floor(Math.min(...allY2) - (yBuffer2 ? yBuffer2[0] : 0)) : 0,
+        allY2.length > 0 ? Math.ceil(Math.max(...allY2) + (yBuffer2 ? yBuffer2[1] : 0)) : 100
+    ];
 
     // 5. 建立比例尺
     const xScale = scaleLinear({ domain: xDomain, range: [0, innerWidth] });
@@ -330,15 +338,15 @@ const ChartTemperatureHumidityLine = ({ data, xScale, yScale1, yScale2 }: any) =
 };
 
 const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} yColor={CONFIG.mainLine_temperature} renderChart={ChartTemperatureLine} />;
+    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} yRange={CONFIG.range_temperature} yColor={CONFIG.mainLine_temperature} renderChart={ChartTemperatureLine} />;
 }
 
 const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} yColor={CONFIG.mainLine_humidity} renderChart={ChartHumidityLine} />;
+    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} yRange={CONFIG.range_humidity} yColor={CONFIG.mainLine_humidity} renderChart={ChartHumidityLine} />;
 }
 
 const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} yColor={CONFIG.mainLine_co2} renderChart={ChartCo2Line} />;
+    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} yRange={CONFIG.range_co2} yColor={CONFIG.mainLine_co2} renderChart={ChartCo2Line} />;
 }
 
 const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humidity History" }: any) => {
@@ -348,9 +356,11 @@ const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humid
             datas={datas} 
             yKey1="temperature" 
             yBuffer1={CONFIG.buffer_temperature} 
+            yRange1={CONFIG.range_temperature}
             yColor1={CONFIG.mainLine_temperature}
             yKey2="humidity" 
             yBuffer2={CONFIG.buffer_humidity} 
+            yRange2={CONFIG.range_humidity}
             yColor2={CONFIG.mainLine_humidity}
             renderChart={ChartTemperatureHumidityLine} 
         />
