@@ -187,6 +187,10 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
             fontWeight: 'bold',
             color: THEME.titleText,
         },
+        yAxis: {
+            marginLeft: '-45px',
+            marginRight: '15px',
+        }
     };
 
     return (
@@ -199,6 +203,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
                 yTicks={yTicks}
                 xLabels={xLabels}
                 theme={THEME}
+                yAxisStyle={styles.yAxis}
             >
                 {renderChart({ data: parsedData, xScale, yScale })}
             </CTChart>
@@ -281,6 +286,14 @@ const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yKey2, yBuffer2
             fontWeight: 'bold',
             color: THEME.titleText,
         },
+        yAxisLeft: {
+            marginLeft: '-45px',
+            marginRight: '15px',
+        },
+        yAxisRight: {
+            marginLeft: '15px',
+            marginRight: '-45px',
+        }
     };
 
     return (
@@ -294,6 +307,8 @@ const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yKey2, yBuffer2
                 yTicksRight={yTicks2}
                 xLabels={xLabels}
                 theme={THEME}
+                yAxisStyle={styles.yAxisLeft}
+                yAxisStyleRight={styles.yAxisRight}
             >
                 {renderChart({ data: parsedData, xScale, yScale1, yScale2 })}
             </CTChart>

@@ -55,6 +55,9 @@ export const CTChart = ({
     yTicksRight = [],
     xLabels = [],
     theme,
+    yAxisStyle = {},
+    yAxisStyleRight = {},
+    chartStyle = {},
     children
 }: any) => {
     const svgWidth = width + padding * 2;
@@ -79,14 +82,14 @@ export const CTChart = ({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
+            {/* Left Y Axis */}
             <div style={{ 
                 display: 'flex',
                 position: 'relative',
-                marginRight: '15px',
-                marginLeft: '-45px',
                 width: `${yAxisWidth}px`, 
                 height: `${height}px`, 
-                marginTop: `${padding}px` 
+                marginTop: `${padding}px`,
+                ...yAxisStyle
             }}>
                 {yTicks.map((t: number) => (
                     <div key={t} style={{
@@ -103,7 +106,7 @@ export const CTChart = ({
                 ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', position: 'relative', ...chartStyle }}>
                 <div style={{ display: 'flex', width: `${svgWidth}px`, height: `${svgHeight}px`, marginLeft: `-${padding}px`, marginTop: `-${padding}px` }}>
                     <svg width={svgWidth} height={svgHeight}>
                         <g transform={`translate(${padding}, ${padding})`}>
@@ -142,14 +145,15 @@ export const CTChart = ({
                 ) : null}
             </div>
 
+            {/* Right Y Axis */}
             {yScaleRight ? (
                 <div style={{ 
                     display: 'flex',
                     position: 'relative',
-                    marginLeft: '15px',
                     width: `${yAxisWidth}px`, 
                     height: `${height}px`, 
-                    marginTop: `${padding}px` 
+                    marginTop: `${padding}px`,
+                    ...yAxisStyleRight
                 }}>
                     {yTicksRight.map((t: number) => (
                         <div key={t} style={{
