@@ -332,8 +332,10 @@ const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yRange1 = null,
 const ChartTemperatureHumidityLine = ({ data, xScale, yScale1, yScale2 }: any) => {
     return (
         <g>
-            {ChartTemperatureLine({ data: data.map((d: any) => ({ x: d.x, y: d.y1 })), xScale, yScale: yScale1 })}
+            {/* 濕度畫在底層 */}
             {ChartHumidityLine({ data: data.map((d: any) => ({ x: d.x, y: d.y2 })), xScale, yScale: yScale2 })}
+            {/* 溫度畫在頂層 */}
+            {ChartTemperatureLine({ data: data.map((d: any) => ({ x: d.x, y: d.y1 })), xScale, yScale: yScale1 })}
         </g>
     );
 };
