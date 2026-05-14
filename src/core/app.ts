@@ -5,7 +5,7 @@ import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM
 import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
-import { Base, IndexPage, Dashboard } from './html.js';
+import { Base, IndexPage, Dashboard } from './frontend/html.js';
 import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg } from './og.js';
 import { ASSETS } from '../../gen/assets.gen.js';
 import { ImageResponse } from '@cf-wasm/og';

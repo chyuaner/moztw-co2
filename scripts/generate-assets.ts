@@ -8,19 +8,35 @@ const ROOT = path.join(__dirname, '..');
 const OUTPUT_FILE = path.join(ROOT, 'gen/assets.gen.ts');
 
 /**
+ * 資產設定：
+ * - key: 產出物件中的鍵名
+ * - path: 原始路徑 (相對於 ROOT)
+ * - generateIco: 是否要額外產生 .ico 版本 (僅限 PNG)
+ * - subset: 是否要進行子集化與 woff2 壓縮 (僅限字體)
+ */
+const ASSET_CONFIG = [
+  { key: 'favicon', path: 'src/core/assets/favicon.png', generateIco: true },
+  { key: 'font', path: 'src/core/assets/font.ttf', subset: true },
+  { key: 'style', path: 'gen/output.css' },
+  { key: 'client', path: 'gen/dist/client/client.js' },
+];
+
+const SOURCE_FILES = [
+  path.join(ROOT, 'src/core/html.tsx'),
+  path.join(ROOT, 'src/core/app.ts'),
+  path.join(ROOT, 'src/core/og.tsx'),
+];
+
+// 基礎字集：英數字、常用符號
+const ALL_TEXT = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ ';
+
+/**
  * 自動從原始碼中提取所有出現過的字元，用於字體子集化
  */
 function collectTextFromFiles(): string {
-  const sourceFiles = [
-    path.join(ROOT, 'src/core/html.tsx'),
-    path.join(ROOT, 'src/core/app.ts'),
-    path.join(ROOT, 'src/core/og.tsx'),
-  ];
+  let allText = ALL_TEXT;
   
-  // 基礎字集：英數字、常用符號
-  let allText = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ ';
-  
-  for (const file of sourceFiles) {
+  for (const file of SOURCE_FILES) {
     if (fs.existsSync(file)) {
       allText += fs.readFileSync(file, 'utf-8');
     }
@@ -29,20 +45,6 @@ function collectTextFromFiles(): string {
   // 移除重複字元並過濾掉控制字元與程式碼保留字（非必要，但能精簡字串）
   return Array.from(new Set(allText.split(''))).join('');
 }
-
-/**
- * 資產設定：
- * - key: 產出物件中的鍵名
- * - path: 原始路徑 (相對於 ROOT)
- * - generateIco: 是否要額外產生 .ico 版本 (僅限 PNG)
- * - subset: 是否要進行子集化與 woff2 壓縮 (僅限字體)
- */
-const ASSET_CONFIG = [
-  { key: 'favicon', path: 'src/core/favicon.png', generateIco: true },
-  { key: 'font', path: 'src/core/font.ttf', subset: true },
-  { key: 'style', path: 'gen/output.css' },
-  { key: 'client', path: 'gen/dist/client/client.js' },
-];
 
 /**
  * 極輕量 PNG 轉 ICO (手動包裝 Header)
