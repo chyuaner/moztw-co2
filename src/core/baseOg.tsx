@@ -90,9 +90,10 @@ export const CTChart = ({
             {yAxisLabel ? (
                 <div style={{
                     display: 'flex',
-                    width: '40px',
+                    width: '40px', // 從 40px 增加到 60px
                     height: `${height}px`,
                     marginTop: `${padding}px`,
+                    marginRight: '8px', // 增加與刻度的間距
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}>
@@ -202,9 +203,10 @@ export const CTChart = ({
             {yAxisLabelRight ? (
                 <div style={{
                     display: 'flex',
-                    width: '40px',
+                    width: '40px', // 從 40px 增加到 60px
                     height: `${height}px`,
                     marginTop: `${padding}px`,
+                    marginLeft: '8px', // 增加與刻度的間距
                     alignItems: 'center',
                     justifyContent: 'center',
                 }}>
