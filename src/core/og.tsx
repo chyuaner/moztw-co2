@@ -361,12 +361,12 @@ const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humid
             yBuffer1={CONFIG.buffer_temperature} 
             yRange1={CONFIG.range_temperature}
             yColor1={CONFIG.mainLine_temperature}
-            yLabel1="溫度 (°C)"
+            // yLabel1="溫度 (°C)"
             yKey2="humidity" 
             yBuffer2={CONFIG.buffer_humidity} 
             yRange2={CONFIG.range_humidity}
             yColor2={CONFIG.mainLine_humidity}
-            yLabel2="濕度 (%)"
+            // yLabel2="濕度 (%)"
             renderChart={ChartTemperatureHumidityLine} 
         />
     );
