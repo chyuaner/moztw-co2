@@ -2,7 +2,7 @@ import { Bot, InputFile, InlineKeyboard } from 'grammy';
 import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
 import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg, TemperatureHumidityChartOg } from './og.js';
-import { getFontData } from './app.js';
+import { generalOgOptions } from './app.js';
 
 export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
   const bot = new Bot(token);
@@ -28,16 +28,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
     return `${p('year')}/${p('month')}/${p('day')} ${p('hour')}:${p('minute')}:${p('second')}`;
   };
 
-  const ogOptions = {
-    width: 1200,
-    height: 630,
-    fonts: [{
-      name: 'sans-serif',
-      data: getFontData(),
-      style: 'normal',
-      weight: 400,
-    }],
-  };
+  // 輔助函式：計算字串視覺顯示寬度，並向右補齊空白
 
   // 輔助函式：計算字串視覺顯示寬度，並向右補齊空白
   const padRight = (text: string, width: number = 22) => {
@@ -143,7 +134,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
         return await ctx.reply('❌ 目前環境不支援直接生成圖片 (ImageResponse missing)');
       }
       
-      const imgRes = new ImageResponse(chartComp({ datas: historyData, title }), ogOptions);
+      const imgRes = new ImageResponse(chartComp({ datas: historyData, title }), generalOgOptions);
 
       await ctx.replyWithPhoto(new InputFile(imgRes.body), {
         caption: messages.join('\n'),
@@ -232,7 +223,7 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: 
       const { id, name } = sensor;
       const { temperature, humidity, co2 } = data;
 
-      const imgRes = new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), ogOptions);
+      const imgRes = new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), generalOgOptions);
 
       await ctx.replyWithPhoto(new InputFile(imgRes.body), {
         caption: `✅ 圖片已生成 (直接渲染模式)\n📍 感測器：${sensor.name}\n🕒 資料時間：${formatDate(sensor.lastchange)}`,

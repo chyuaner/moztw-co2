@@ -46,7 +46,7 @@ export const getSensors = (c: any) => {
   }
 };
 
-// Helper to get font buffer
+// 取得字型資料的輔助函式
 export const getFontData = () => {
   const binary = atob(ASSETS.font_ttf);
   const bytes = new Uint8Array(binary.length);
@@ -54,6 +54,18 @@ export const getFontData = () => {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes.buffer;
+};
+
+// 通用的 OG 圖片設定
+export const generalOgOptions = {
+  width: 1200,
+  height: 630,
+  fonts: [{
+    name: 'sans-serif',
+    data: getFontData(),
+    style: 'normal',
+    weight: 400,
+  }],
 };
 
 /* -----------------------------------------------------------------------------
@@ -235,17 +247,7 @@ og.get('/locations/:id', async (c) => {
     const humidity = data.humidity;
     const co2 = data.co2;
 
-    return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
+    return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), generalOgOptions);
   } catch (error) {
     console.error('[OG Error]', error);
     return c.text('無法產出 OG 圖片，請稍後再試。', 500);
@@ -286,16 +288,7 @@ const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity
     const title = `🏠摩茲工寮 ${sensor.name} 最近 6 小時內的${typeLabel}`;
     const historyData = await sensor.getHistoryByHours(6, 0);
 
-    return new ImageResponse(chartComp({ datas: historyData, title }), {
-      width: 1200,
-      height: 630,
-      fonts: [{
-        name: 'sans-serif',
-        data: getFontData(),
-        style: 'normal',
-        weight: 400,
-      }],
-    });
+    return new ImageResponse(chartComp({ datas: historyData, title }), generalOgOptions);
   } catch (error) {
     console.error(`[OG ${type} Chart Error]`, error);
     return c.text(`無法產出 OG ${type} 圖表，請稍後再試。`, 500);
