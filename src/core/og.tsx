@@ -9,12 +9,10 @@ const CONFIG = {
     // Data Series Colors
     mainLine: '#424242ff',
     mainLine_temperature: '#ef4444',
-    mainLine_humidity: '#2563eb',
-    mainLine_co2: '#10b981',
-
-    // Areas
     mainLineArea_temperature: null,
-    mainLineArea_humidity: null,
+    mainLine_humidity: '#507fe6ff',
+    mainLineArea_humidity: 'rgba(80, 128, 230, 0.2)',
+    mainLine_co2: '#10b981',
     mainLineArea_co2: 'rgba(16, 185, 129, 0.2)',
 
     // Markers & Lines
