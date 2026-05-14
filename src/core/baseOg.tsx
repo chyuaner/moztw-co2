@@ -58,6 +58,8 @@ export const CTChart = ({
     yAxisStyle = {},
     yAxisStyleRight = {},
     chartStyle = {},
+    yAxisTextColor = null,
+    yAxisTextColorRight = null,
     children
 }: any) => {
     const svgWidth = width + padding * 2;
@@ -101,7 +103,8 @@ export const CTChart = ({
                         alignItems: 'center',
                         justifyContent: 'flex-end',
                         fontSize: theme.axisFontSize,
-                        color: theme.axisText,
+                        color: yAxisTextColor || theme.axisText,
+                        fontWeight: yAxisTextColor ? 'bold' : 'normal',
                     }}>{t}</div>
                 ))}
             </div>
@@ -165,7 +168,8 @@ export const CTChart = ({
                             alignItems: 'center',
                             justifyContent: 'flex-start',
                             fontSize: theme.axisFontSize,
-                            color: theme.axisText,
+                            color: yAxisTextColorRight || theme.axisText,
+                            fontWeight: yAxisTextColorRight ? 'bold' : 'normal',
                         }}>{t}</div>
                     ))}
                 </div>

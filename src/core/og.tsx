@@ -114,7 +114,7 @@ const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
 }
 
 // Basechart: 共用的圖表版面框架與資料處理邏輯
-const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: any) => {
+const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yColor, renderChart }: any) => {
     // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
         const ts = d.lastchange;
@@ -204,6 +204,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
                 xLabels={xLabels}
                 theme={THEME}
                 yAxisStyle={styles.yAxis}
+                yAxisTextColor={yColor}
             >
                 {renderChart({ data: parsedData, xScale, yScale })}
             </CTChart>
@@ -212,7 +213,7 @@ const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], renderChart }: a
 };
 
 // DualAxisBaseChart: 支援雙 Y 軸的圖表框架
-const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yKey2, yBuffer2, renderChart }: any) => {
+const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yColor1, yKey2, yBuffer2, yColor2, renderChart }: any) => {
     // 1. 資料解析與預處理
     const parsedData = datas.map((d: any) => {
         const ts = d.lastchange;
@@ -309,6 +310,8 @@ const DualAxisBaseChart = ({ title, datas = [], yKey1, yBuffer1, yKey2, yBuffer2
                 theme={THEME}
                 yAxisStyle={styles.yAxisLeft}
                 yAxisStyleRight={styles.yAxisRight}
+                yAxisTextColor={yColor1}
+                yAxisTextColorRight={yColor2}
             >
                 {renderChart({ data: parsedData, xScale, yScale1, yScale2 })}
             </CTChart>
@@ -327,15 +330,15 @@ const ChartTemperatureHumidityLine = ({ data, xScale, yScale1, yScale2 }: any) =
 };
 
 const TemperatureChartOg = ({ datas = [], title = "Temperature History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} renderChart={ChartTemperatureLine} />;
+    return <BaseChart title={title} datas={datas} yKey="temperature" yBuffer={CONFIG.buffer_temperature} yColor={CONFIG.mainLine_temperature} renderChart={ChartTemperatureLine} />;
 }
 
 const HumidityChartOg = ({ datas = [], title = "Humidity History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} renderChart={ChartHumidityLine} />;
+    return <BaseChart title={title} datas={datas} yKey="humidity" yBuffer={CONFIG.buffer_humidity} yColor={CONFIG.mainLine_humidity} renderChart={ChartHumidityLine} />;
 }
 
 const Co2ChartOg = ({ datas = [], title = "CO2 History" }: any) => {
-    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} renderChart={ChartCo2Line} />;
+    return <BaseChart title={title} datas={datas} yKey="co2" yBuffer={CONFIG.buffer_co2} yColor={CONFIG.mainLine_co2} renderChart={ChartCo2Line} />;
 }
 
 const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humidity History" }: any) => {
@@ -345,8 +348,10 @@ const TemperatureHumidityChartOg = ({ datas = [], title = "Temperature and Humid
             datas={datas} 
             yKey1="temperature" 
             yBuffer1={CONFIG.buffer_temperature} 
+            yColor1={CONFIG.mainLine_temperature}
             yKey2="humidity" 
             yBuffer2={CONFIG.buffer_humidity} 
+            yColor2={CONFIG.mainLine_humidity}
             renderChart={ChartTemperatureHumidityLine} 
         />
     );
