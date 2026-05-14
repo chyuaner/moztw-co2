@@ -10,8 +10,8 @@ const CONFIG = {
     mainLine: '#424242ff',
     mainLine_temperature: '#ef4444',
     mainLineArea_temperature: null,
-    mainLine_humidity: '#507fe6ff',
-    mainLineArea_humidity: 'rgba(80, 128, 230, 0.2)',
+    mainLine_humidity: '#7494daff',
+    mainLineArea_humidity: 'rgba(116, 148, 218, 0.2)',
     mainLine_co2: '#10b981',
     mainLineArea_co2: 'rgba(16, 185, 129, 0.2)',
 
