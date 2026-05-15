@@ -253,31 +253,32 @@ og.onError((err, c) => {
   return renderOgError(c, 500, err.message || '產圖過程中發生錯誤');
 });
 
-og.get('/locations/:id', async (c) => {
-  const ImageResponse = c.get('ImageResponse');
+og.get('/locations/:id', (c) => renderSensorChartResponse(c, 'temperature_humidity'));
+// og.get('/locations/:id', async (c) => {
+//   const ImageResponse = c.get('ImageResponse');
 
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
-  }
+//   if (!ImageResponse) {
+//     return c.text('ImageResponse not found in context', 500);
+//   }
 
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return renderOgError(c, 404, '找不到感測器裝置');
-    }
-    const data = await sensor.getAll();
-    const name = sensor.name;
-    const temperature = data.temperature;
-    const humidity = data.humidity;
-    const co2 = data.co2;
+//   try {
+//     const id = c.req.param('id');
+//     const sensors = getSensors(c);
+//     const sensor = sensors.find((s: SwitchBot) => s.id === id);
+//     if (!sensor) {
+//       return renderOgError(c, 404, '找不到感測器裝置');
+//     }
+//     const data = await sensor.getAll();
+//     const name = sensor.name;
+//     const temperature = data.temperature;
+//     const humidity = data.humidity;
+//     const co2 = data.co2;
 
-    return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), generalOgOptions);
-  } catch (error) {
-    throw error;
-  }
-});
+//     return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), generalOgOptions);
+//   } catch (error) {
+//     throw error;
+//   }
+// });
 
 const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity' | 'co2' | 'temperature_humidity') => {
   const ImageResponse = c.get('ImageResponse');
