@@ -23,9 +23,9 @@ export type Bindings = {
 
 export const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
-/* -----------------------------------------------------------------------------
+/* =============================================================================
 Helper 區
------------------------------------------------------------------------------ */
+============================================================================= */
 
 // 取得感測器實例列表的輔助函式
 export const getSensors = (c: any) => {
@@ -91,59 +91,6 @@ const renderOgError = (c: any, statusCode: number, title: string) => {
 /* -----------------------------------------------------------------------------
 主要 Router 邏輯區
 ----------------------------------------------------------------------------- */
-
-// 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
-app.get('/sensors', async (c) => {
-  try {
-    const sensors = getSensors(c);
-    const result: any = {
-      temperature: [],
-      humidity: [],
-      carbondioxide: [],
-    };
-
-    for (const s of sensors) {
-      const data = await s.getAll();
-      const formatted = formatSpaceApi(s.id, s.name, data);
-
-      if (formatted.temperature) result.temperature.push(formatted.temperature);
-      if (formatted.humidity) result.humidity.push(formatted.humidity);
-      if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-    }
-
-    return c.json(result);
-  } catch (error) {
-    console.error(`[Error] GET /sensors:`, error);
-    return c.text('無法抓取空間資訊，請稍後再試。', 500);
-  }
-});
-
-app.get('/sensors/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return c.json({ error: 'Sensor not found' }, 404);
-    }
-    const data = await sensor.getAll();
-    const formatted = formatSpaceApi(sensor.id, sensor.name, data);
-    const result: any = {
-      temperature: [],
-      humidity: [],
-      carbondioxide: [],
-    };
-    if (formatted.temperature) result.temperature.push(formatted.temperature);
-    if (formatted.humidity) result.humidity.push(formatted.humidity);
-    if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-
-    return c.json(result);
-  } catch (error) {
-    console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
-    return c.text('無法抓取空間資訊，請稍後再試。', 500);
-  }
-});
-
 // 本站原始格式 API 路由 (SensorDataRecord 規格)
 app.get('/locations', async (c) => {
   try {
@@ -239,6 +186,61 @@ app.get('/locations/:id/history', async (c) => {
   } catch (error) {
     console.error(`[Error] GET /devices/${c.req.param('id')}/history:`, error);
     return c.text('無法抓取歷史資訊，請稍後再試。', 500);
+  }
+});
+
+/* -----------------------------------------------------------------------------
+主要 SpaceAPI 相容邏輯區
+----------------------------------------------------------------------------- */
+// 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
+app.get('/sensors', async (c) => {
+  try {
+    const sensors = getSensors(c);
+    const result: any = {
+      temperature: [],
+      humidity: [],
+      carbondioxide: [],
+    };
+
+    for (const s of sensors) {
+      const data = await s.getAll();
+      const formatted = formatSpaceApi(s.id, s.name, data);
+
+      if (formatted.temperature) result.temperature.push(formatted.temperature);
+      if (formatted.humidity) result.humidity.push(formatted.humidity);
+      if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+    }
+
+    return c.json(result);
+  } catch (error) {
+    console.error(`[Error] GET /sensors:`, error);
+    return c.text('無法抓取空間資訊，請稍後再試。', 500);
+  }
+});
+
+app.get('/sensors/:id', async (c) => {
+  try {
+    const id = c.req.param('id');
+    const sensors = getSensors(c);
+    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    if (!sensor) {
+      return c.json({ error: 'Sensor not found' }, 404);
+    }
+    const data = await sensor.getAll();
+    const formatted = formatSpaceApi(sensor.id, sensor.name, data);
+    const result: any = {
+      temperature: [],
+      humidity: [],
+      carbondioxide: [],
+    };
+    if (formatted.temperature) result.temperature.push(formatted.temperature);
+    if (formatted.humidity) result.humidity.push(formatted.humidity);
+    if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+
+    return c.json(result);
+  } catch (error) {
+    console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
+    return c.text('無法抓取空間資訊，請稍後再試。', 500);
   }
 });
 
@@ -353,16 +355,15 @@ og.all('*', (c) => renderOgError(c, 404, '找不到此圖片路徑'));
 
 app.route('/og', og);
 
-/* -----------------------------------------------------------------------------
+/* =============================================================================
 前端區
 已經移到 ./frontend/route.ts
------------------------------------------------------------------------------ */
+============================================================================= */
 app.route('/', fe);
 
-
-/* -----------------------------------------------------------------------------
+/* =============================================================================
 接入整合外部服務區
------------------------------------------------------------------------------ */
+============================================================================= */
 
 // SwitchBot Webhook 接收端點
 app.post('/switch-bot/:token', async (c) => {
