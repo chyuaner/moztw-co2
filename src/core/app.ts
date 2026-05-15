@@ -1,14 +1,14 @@
-import { Hono } from 'hono';
+import { OpenAPIHono } from '@hono/zod-openapi';
 import { env } from 'hono/adapter';
+import locationsApi from './route/locations.js';
+import sensorsApi from './route/sensors.js';
+import ogApi from './route/og.js';
 import { app as fe } from './frontend/route.js';
 import { webhookCallback } from 'grammy';
-import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
-import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
-import { formatSpaceApi } from './format.js';
+import { createBot } from './route/bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
+import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
-import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ErrorElement } from './og.js';
-import { ASSETS } from '../../gen/assets.gen.js';
-import { ImageResponse } from '@cf-wasm/og';
+import { ASSETS, BUILD_INFO } from '../../gen/assets.gen.js';
 
 export type Variables = {
   store: IStore;
@@ -23,7 +23,17 @@ export type Bindings = {
   SENSOR_KV?: any;
 };
 
-export const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+export const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
+
+// 自動生成 OpenAPI Spec 的路由
+app.doc('/openapi.json', {
+  openapi: '3.1.0',
+  info: {
+    title: 'Moztw Space API',
+    version: BUILD_INFO.version,
+    description: '提供摩茲工寮即時空間感測數據',
+  },
+});
 
 /* =============================================================================
 Helper 區
@@ -39,8 +49,6 @@ export const getSensors = (c: any) => {
     const configs: SensorConfig[] = JSON.parse(configStr);
     const defer = c.get('defer') as Variables['defer'];
     return configs.map((cfg) => {
-      // 預留未來擴充其他廠牌 IoT 設備的彈性
-      // if (cfg.vendor === 'other') return new OtherBot(cfg);
       const sensor = new SwitchBot(cfg, store);
       if (defer) sensor.setDefer(defer);
       return sensor;
@@ -73,296 +81,15 @@ export const generalOgOptions = {
   }],
 };
 
-// 輔助函式：產出 OG 錯誤圖片
-const renderOgError = (c: any, statusCode: number, title: string) => {
-  const ImageResponse = c.get('ImageResponse');
-  if (!ImageResponse) {
-    return c.text('ImageResponse錯誤，無法產生圖片。', 500);
-  }
-
-  try {
-    const res = new ImageResponse(ErrorElement({ statusCode, title }), generalOgOptions);
-    // 透過包裝 Response 來改變 status code
-    return new Response(res.body, {
-      status: statusCode,
-      headers: res.headers,
-    });
-  } catch (error) {
-    console.error('[OG Error Render Fallback]', error);
-    return c.text('無法產生圖片，以及 '+statusCode+': '+title, 500);
-  }
-};
-
 /* -----------------------------------------------------------------------------
-主要 Router 邏輯區
+主要 Router 掛載區
 ----------------------------------------------------------------------------- */
-// 本站原始格式 API 路由 (SensorDataRecord 規格)
-app.get('/locations', async (c) => {
-  try {
-    const sensors = getSensors(c);
-    const result: any[] = [];
-
-    for (const s of sensors) {
-      const data = await s.getAll();
-      result.push({
-        id: s.id,
-        name: s.name,
-        ...data,
-      });
-    }
-
-    return c.json(result);
-  } catch (error) {
-    console.error(`[Error] GET /devices:`, error);
-    return c.text('無法抓取裝置資訊，請稍後再試。', 500);
-  }
-});
-
-app.get('/locations/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return c.json({ error: 'Device not found' }, 404);
-    }
-    const data = await sensor.getAll();
-    return c.json({
-      id: sensor.id,
-      name: sensor.name,
-      ...data,
-    });
-  } catch (error) {
-    console.error(`[Error] GET /devices/${c.req.param('id')}:`, error);
-    return c.text('無法抓取裝置資訊，請稍後再試。', 500);
-  }
-});
-
-app.get('/locations/:id/history', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) return c.json({ error: 'Device not found' }, 404);
-
-    const query = c.req.query();
-    let results: SensorDataRecord[] = [];
-    
-    // 1. Timestamp 優先 (min_ts, max_ts)
-    if (query.min_ts) {
-      const min = parseInt(query.min_ts);
-      const max = query.max_ts ? parseInt(query.max_ts) : undefined;
-      results = await sensor.getHistoryByTimestamp(min, max);
-    }
-    // 2. 相對時間 (Days: limit_days, offset_days)
-    else if (query.limit_days) {
-      const limit = parseInt(query.limit_days);
-      const offset = query.offset_days ? parseInt(query.offset_days) : 0;
-      results = await sensor.getHistoryByDays(limit, offset);
-    }
-    // 3. 相對時間 (Months: limit_months, offset_months)
-    else if (query.limit_months) {
-      const limit = parseInt(query.limit_months);
-      const offset = query.offset_months ? parseInt(query.offset_months) : 0;
-      results = await sensor.getHistoryByMonths(limit, offset);
-    }
-    // 4. 相對時間 (Hours: limit_hours, offset_hours)
-    else if (query.limit_hours) {
-      const limit = parseInt(query.limit_hours);
-      const offset = query.offset_hours ? parseInt(query.offset_hours) : 0;
-      results = await sensor.getHistoryByHours(limit, offset);
-    }
-    // 預設回傳最近的歷史紀錄 (按 limit/offset 優化讀取)
-    else {
-      const limit = query.limit ? parseInt(query.limit) : 100;
-      const offset = query.offset ? parseInt(query.offset) : 0;
-      results = await sensor.getHistory(limit, offset);
-      return c.json(results); // 已在內部優化，直接回傳
-    }
-
-    // 基礎分頁支援 (針對有時間範圍篩選後的結果進行切片)
-    if (query.limit || query.offset) {
-      const limit = query.limit ? parseInt(query.limit) : results.length;
-      const offset = query.offset ? parseInt(query.offset) : 0;
-      results = results.slice(offset, offset + limit);
-    }
-
-    return c.json(results);
-  } catch (error) {
-    console.error(`[Error] GET /devices/${c.req.param('id')}/history:`, error);
-    return c.text('無法抓取歷史資訊，請稍後再試。', 500);
-  }
-});
-
-/* -----------------------------------------------------------------------------
-主要 SpaceAPI 相容邏輯區
------------------------------------------------------------------------------ */
-// 基本的 HTTP API 路由 (SpaceAPI Sensors 規格)
-app.get('/sensors', async (c) => {
-  try {
-    const sensors = getSensors(c);
-    const result: any = {
-      temperature: [],
-      humidity: [],
-      carbondioxide: [],
-    };
-
-    for (const s of sensors) {
-      const data = await s.getAll();
-      const formatted = formatSpaceApi(s.id, s.name, data);
-
-      if (formatted.temperature) result.temperature.push(formatted.temperature);
-      if (formatted.humidity) result.humidity.push(formatted.humidity);
-      if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-    }
-
-    return c.json(result);
-  } catch (error) {
-    console.error(`[Error] GET /sensors:`, error);
-    return c.text('無法抓取空間資訊，請稍後再試。', 500);
-  }
-});
-
-app.get('/sensors/:id', async (c) => {
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return c.json({ error: 'Sensor not found' }, 404);
-    }
-    const data = await sensor.getAll();
-    const formatted = formatSpaceApi(sensor.id, sensor.name, data);
-    const result: any = {
-      temperature: [],
-      humidity: [],
-      carbondioxide: [],
-    };
-    if (formatted.temperature) result.temperature.push(formatted.temperature);
-    if (formatted.humidity) result.humidity.push(formatted.humidity);
-    if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-
-    return c.json(result);
-  } catch (error) {
-    console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
-    return c.text('無法抓取空間資訊，請稍後再試。', 500);
-  }
-});
-
-/* -----------------------------------------------------------------------------
-OG即時產圖區
------------------------------------------------------------------------------ */
-const og = new Hono<{ Bindings: Bindings; Variables: Variables }>();
-
-// OG 路由專屬的錯誤處理
-og.onError((err, c) => {
-  console.error('[OG Router Error]', err);
-  return renderOgError(c, 500, err.message || '產圖過程中發生錯誤');
-});
-
-og.get('/locations/:id', (c) => renderSensorChartResponse(c, 'temperature_humidity'));
-// og.get('/locations/:id', async (c) => {
-//   const ImageResponse = c.get('ImageResponse');
-
-//   if (!ImageResponse) {
-//     return c.text('ImageResponse not found in context', 500);
-//   }
-
-//   try {
-//     const id = c.req.param('id');
-//     const sensors = getSensors(c);
-//     const sensor = sensors.find((s: SwitchBot) => s.id === id);
-//     if (!sensor) {
-//       return renderOgError(c, 404, '找不到感測器裝置');
-//     }
-//     const data = await sensor.getAll();
-//     const name = sensor.name;
-//     const temperature = data.temperature;
-//     const humidity = data.humidity;
-//     const co2 = data.co2;
-
-//     return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), generalOgOptions);
-//   } catch (error) {
-//     throw error;
-//   }
-// });
-
-const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity' | 'co2' | 'temperature_humidity') => {
-  const ImageResponse = c.get('ImageResponse');
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
-  }
-
-  try {
-    const id = c.req.param('id');
-    const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
-    if (!sensor) {
-      return renderOgError(c, 404, `找不到感測器裝置 (${id})`);
-    }
-
-    let chartComp: any;
-    let typeLabel = '';
-
-    if (type === 'temperature_humidity') {
-      chartComp = TemperatureHumidityChartOg;
-      typeLabel = '溫濕度';
-    } else if (type === 'temperature') {
-      chartComp = TemperatureChartOg;
-      typeLabel = '溫度';
-    } else if (type === 'humidity') {
-      chartComp = HumidityChartOg;
-      typeLabel = '濕度';
-    } else {
-      chartComp = Co2ChartOg;
-      typeLabel = 'CO2';
-    }
-
-    const title = `🏠摩茲工寮 ${sensor.name} 最近 6 小時內的${typeLabel}`;
-    const historyData = await sensor.getHistoryByHours(6, 0);
-
-    return new ImageResponse(chartComp({ datas: historyData, title }), generalOgOptions);
-  } catch (error) {
-    throw error;
-  }
-};
-
-og.get('/locations/:id/temperature', (c) => renderSensorChartResponse(c, 'temperature'));
-og.get('/locations/:id/humidity', (c) => renderSensorChartResponse(c, 'humidity'));
-og.get('/locations/:id/temperature_humidity', (c) => renderSensorChartResponse(c, 'temperature_humidity'));
-og.get('/locations/:id/co2', (c) => renderSensorChartResponse(c, 'co2'));
-
-og.get('/chart-test', async (c) => {
-  const ImageResponse = c.get('ImageResponse');
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
-  }
-
-  try {
-    return new ImageResponse(ChartOg(), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
-  } catch (error) {
-    throw error;
-  }
-});
-
-// 萬能匹配，確保所有未定義的 /og/* 路徑都回傳錯誤圖片
-og.all('*', (c) => renderOgError(c, 404, '找不到此圖片路徑'));
-
-app.route('/og', og);
+app.route('/locations', locationsApi);
+app.route('/og', ogApi);
+app.route('/sensors', sensorsApi);
 
 /* =============================================================================
-前端區
-已經移到 ./frontend/route.ts
+前端區 (已經移到 ./frontend/route.ts)
 ============================================================================= */
 app.route('/', fe);
 
@@ -370,9 +97,10 @@ app.route('/', fe);
 接入整合外部服務區
 ============================================================================= */
 
-// SwitchBot Webhook 接收端點
+// 處理來自 SwitchBot 的 Webhook 數據更新
 app.post('/switch-bot/:token', async (c) => {
   const tokenFromPath = c.req.param('token');
+  const sensors = getSensors(c);
   
   try {
     const body = await c.req.json();
@@ -380,13 +108,12 @@ app.post('/switch-bot/:token', async (c) => {
     
     if (body.eventType === 'changeReport' && body.context && body.context.deviceMac) {
       const mac = body.context.deviceMac;
-      const sensors = getSensors(c);
       
       const targetSensor = sensors.find((s: SwitchBot) => {
         const configuredMac = s.deviceId.replace(/:/g, '').toUpperCase();
         return configuredMac === mac.toUpperCase();
       });
-      
+
       if (targetSensor) {
         // 安全檢查：驗證 URL 中的 token 是否與該感測器配置的 token 吻合
         if (!targetSensor.checkToken(tokenFromPath)) {
@@ -394,6 +121,7 @@ app.post('/switch-bot/:token', async (c) => {
           return c.text('Unauthorized', 401);
         }
 
+        // 維持原有的 updateFromWebhook 呼叫與參數
         await targetSensor.updateFromWebhook(body.context);
         return c.text('OK');
       } else {
@@ -401,41 +129,44 @@ app.post('/switch-bot/:token', async (c) => {
         return c.text('Device not configured', 404);
       }
     }
-    
     return c.text('Ignored');
-  } catch (err) {
-    console.error('[Webhook] Error:', err);
+  } catch (error) {
+    console.error('[Webhook Error]', error);
     return c.text('Error', 500);
   }
 });
 
-// Telegram Bot Webhook 接收端點
+// Telegram Bot Webhook 進入點
 app.post('/bot/:token', async (c) => {
   const tokenFromPath = c.req.param('token');
-  const { TELEGRAM_BOT_TOKEN, SENSORS_CONFIG } = env<Bindings>(c);
+  const bindings = env<Bindings>(c);
   
-  if (!TELEGRAM_BOT_TOKEN || tokenFromPath !== TELEGRAM_BOT_TOKEN) {
+  if (!bindings.TELEGRAM_BOT_TOKEN || tokenFromPath !== bindings.TELEGRAM_BOT_TOKEN) {
     return c.json({ error: 'Unauthorized or Bot token not configured' }, 401);
   }
 
-  let sensorsConfig: SensorConfig[] = [];
-  try {
-    sensorsConfig = JSON.parse(SENSORS_CONFIG || '[]');
-  } catch (e) {
-    console.error('[Config Error] Failed to parse SENSORS_CONFIG for Bot:', e);
-  }
-
-  const bot = createBot(TELEGRAM_BOT_TOKEN, sensorsConfig, c.get('store'), new URL(c.req.url).origin, c.get('ImageResponse'));
+  const store = c.get('store');
+  const configStr = bindings.SENSORS_CONFIG || '[]';
+  const sensorsConfigs = JSON.parse(configStr);
   
-  // 使用 grammY 內建的 webhookCallback，並指定 adapter 為 'hono'
+  const bot = createBot(
+    bindings.TELEGRAM_BOT_TOKEN, 
+    sensorsConfigs, 
+    store, 
+    new URL(c.req.url).origin,
+    c.get('ImageResponse')
+  );
+  
   const handleUpdate = webhookCallback(bot, 'hono');
   return handleUpdate(c);
 });
 
+// 全域錯誤處理與 404
 app.notFound((c) => c.text('Not Found', 404));
 
-// 全域錯誤處理
 app.onError((err, c) => {
   console.error(`[Global Error] ${c.req.method} ${c.req.url}:`, err);
   return c.text('伺服器發生錯誤，請稍後再試。', 500);
 });
+
+export default app;

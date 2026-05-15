@@ -25,6 +25,10 @@ const SOURCE_FILES = [
   path.join(ROOT, 'src/core/html.tsx'),
   path.join(ROOT, 'src/core/app.ts'),
   path.join(ROOT, 'src/core/og.tsx'),
+  path.join(ROOT, 'src/core/route/locations.ts'),
+  path.join(ROOT, 'src/core/route/sensors.ts'),
+  path.join(ROOT, 'src/core/route/og.ts'),
+  path.join(ROOT, 'src/core/route/bot.ts'),
 ];
 
 // 基礎字集：英數字、常用符號
@@ -103,6 +107,17 @@ async function run() {
     }
   }
 
+  // 取得所有原始碼檔案中，最後修改的時間作為版本依據
+  let latestMtime = 0;
+  for (const file of SOURCE_FILES) {
+    if (fs.existsSync(file)) {
+      const stats = fs.statSync(file);
+      latestMtime = Math.max(latestMtime, stats.mtimeMs);
+    }
+  }
+  const versionDate = new Date(latestMtime).toISOString().split('T')[0].replace(/-/g, '.');
+  const buildTime = new Date().toISOString();
+
   const content = `/** 
  * 此檔案為自動產生，請勿手動修改。
  * 執行 npm run build:assets 更新。
@@ -110,6 +125,12 @@ async function run() {
 export const ASSETS = {
 ${Object.entries(results).map(([key, val]) => `  ${key}: "${val}",`).join('\n')}
 } as const;
+
+export const BUILD_INFO = {
+  version: "${versionDate}",
+  buildTime: "${buildTime}",
+} as const;
+
 `;
 
   // 檢查內容是否一致，避免觸發 Wrangler Watch 造成無限對圈
