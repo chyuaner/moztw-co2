@@ -6,7 +6,7 @@ import { createBot } from './bot.js'; // 注意：使用 .js 結尾以符合 ESM
 import { SwitchBot, SensorConfig, SensorDataRecord } from './switchBot.js';
 import { formatSpaceApi } from './format.js';
 import { IStore } from './store.js';
-import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg } from './og.js';
+import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ErrorElement } from './og.js';
 import { ASSETS } from '../../gen/assets.gen.js';
 import { ImageResponse } from '@cf-wasm/og';
 
@@ -66,6 +66,26 @@ export const generalOgOptions = {
     style: 'normal',
     weight: 400,
   }],
+};
+
+// 輔助函式：產出 OG 錯誤圖片
+const renderOgError = (c: any, statusCode: number, title: string) => {
+  const ImageResponse = c.get('ImageResponse');
+  if (!ImageResponse) {
+    return c.text('ImageResponse錯誤，無法產生圖片。', 500);
+  }
+
+  try {
+    const res = new ImageResponse(ErrorElement({ statusCode, title }), generalOgOptions);
+    // 透過包裝 Response 來改變 status code
+    return new Response(res.body, {
+      status: statusCode,
+      headers: res.headers,
+    });
+  } catch (error) {
+    console.error('[OG Error Render Fallback]', error);
+    return c.text('無法產生圖片，以及 '+statusCode+': '+title, 500);
+  }
 };
 
 /* -----------------------------------------------------------------------------
@@ -227,6 +247,12 @@ OG即時產圖區
 ----------------------------------------------------------------------------- */
 const og = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 
+// OG 路由專屬的錯誤處理
+og.onError((err, c) => {
+  console.error('[OG Router Error]', err);
+  return renderOgError(c, 500, err.message || '產圖過程中發生錯誤');
+});
+
 og.get('/locations/:id', async (c) => {
   const ImageResponse = c.get('ImageResponse');
 
@@ -239,7 +265,7 @@ og.get('/locations/:id', async (c) => {
     const sensors = getSensors(c);
     const sensor = sensors.find((s: SwitchBot) => s.id === id);
     if (!sensor) {
-      return c.text('Device not found', 404);
+      return renderOgError(c, 404, '找不到感測器裝置');
     }
     const data = await sensor.getAll();
     const name = sensor.name;
@@ -249,8 +275,7 @@ og.get('/locations/:id', async (c) => {
 
     return new ImageResponse(SensorOg({id, name, temperature, humidity, co2}), generalOgOptions);
   } catch (error) {
-    console.error('[OG Error]', error);
-    return c.text('無法產出 OG 圖片，請稍後再試。', 500);
+    throw error;
   }
 });
 
@@ -265,7 +290,7 @@ const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity
     const sensors = getSensors(c);
     const sensor = sensors.find((s: SwitchBot) => s.id === id);
     if (!sensor) {
-      return c.text('Device not found', 404);
+      return renderOgError(c, 404, `找不到感測器裝置 (${id})`);
     }
 
     let chartComp: any;
@@ -290,8 +315,7 @@ const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity
 
     return new ImageResponse(chartComp({ datas: historyData, title }), generalOgOptions);
   } catch (error) {
-    console.error(`[OG ${type} Chart Error]`, error);
-    return c.text(`無法產出 OG ${type} 圖表，請稍後再試。`, 500);
+    throw error;
   }
 };
 
@@ -319,10 +343,12 @@ og.get('/chart-test', async (c) => {
         }],
       });
   } catch (error) {
-    console.error('[OG Chart Error]', error);
-    return c.text('無法產出 OG 圖表，請稍後再試。', 500);
+    throw error;
   }
 });
+
+// 萬能匹配，確保所有未定義的 /og/* 路徑都回傳錯誤圖片
+og.all('*', (c) => renderOgError(c, 404, '找不到此圖片路徑'));
 
 app.route('/og', og);
 

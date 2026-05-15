@@ -1,6 +1,7 @@
 import { scaleLinear } from "@visx/scale";
 import { CTArea, CTChart, CTLine, CTScatter } from "./baseOg";
 import { SensorDataRecord } from "./switchBot";
+import { CSSProperties } from "hono/jsx";
 
 /* ----------------------------------------------------
 Config區
@@ -115,6 +116,40 @@ const SensorOg = ({ id, name, temperature, humidity, co2 }: any) => {
         </div>
     );
 }
+
+const ErrorElement = ({
+    statusCode,
+    title,
+    style = {},
+} : {
+    statusCode: Number,
+    title: String,
+    style?: CSSProperties
+}) => {
+
+    const main = <div
+        style={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            height: "100%",
+            padding: "3em",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            ...style,
+        }}
+        >
+        <div style={{display: 'flex', width: '100%', borderBottom: '1px solid black', alignItems: "center", justifyContent: "center", paddingBottom: '15px', gap: '20'}}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-file-unknown"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M12 17v.01" /><path d="M12 14a1.5 1.5 0 1 0 -1.14 -2.474" /></svg>
+            <h1>{statusCode} Error</h1>
+        </div>
+        <div style={{display: 'flex', padding: '1em'}}>
+            <p>{title}</p>
+        </div>
+        </div>;
+
+  return main;
+};
 
 // Basechart: 共用的圖表版面框架與資料處理邏輯
 const BaseChart = ({ title, datas = [], yKey, yBuffer = [0, 0], yRange = null, yColor, yLabel, renderChart }: any) => {
@@ -512,4 +547,4 @@ const ChartTestOg = () => {
 /* ----------------------------------------------------
 設定哪些組件要開放
 ---------------------------------------------------- */
-export {SensorOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ChartTestOg as ChartOg};
+export {SensorOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ChartTestOg as ChartOg, ErrorElement};
