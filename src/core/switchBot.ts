@@ -148,30 +148,55 @@ export class SwitchBot {
     const recordKey = `sensor:${this.deviceId}`;
     const isWebhook = savedata.isWebhook || false;
 
-    // 移除所有判定邏輯，一律寫入
     console.log(`[SwitchBot] ${this.name} 執行儲存 (來源: ${isWebhook ? 'Webhook' : 'Fetch'})`);
 
-    // 1. 寫入歷史紀錄 (Raw Ingestion)
+    // 1. 優先寫入當前狀態（Bot/API 依賴此 key）
+    // scopedPut 會讀寫整包 _m: 索引，隨歷史增長變慢；若放前面，Worker 可能在完成前逾時而永遠跳過此步
+    try {
+      await this.store.put(recordKey, savedata);
+      console.log(`[Store] ${this.name} 當前狀態寫入成功: ${recordKey}, lastchange=${savedata.lastchange}`);
+    } catch (err) {
+      console.error(`[Store Error] ${this.name} 當前狀態寫入失敗:`, err);
+      throw err;
+    }
+
+    // 2. 寫入歷史紀錄 (Raw Ingestion)
     try {
       const timestampMs = savedata.lastchange ? savedata.lastchange * 1000 : Date.now();
       const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
       const scope = `deviceId:${this.deviceId}:${dateStr}`;
       const timestampStr = `${timestampMs}`;
-      
-      if (this.store) {
-        await this.store.scopedPut(scope, timestampStr, savedata);
-        console.log(`[Store] ${this.name} 歷史紀錄寫入成功: ${JSON.stringify(savedata)}`);
-      }
+
+      await this.store.scopedPut(scope, timestampStr, savedata);
+      console.log(`[Store] ${this.name} 歷史紀錄寫入成功, lastchange=${savedata.lastchange}`);
     } catch (err) {
       console.error(`[Store Error] ${this.name} 歷史紀錄寫入失敗:`, err);
     }
+  }
 
-    // 2. 更新當前狀態 (用於 API/Bot 快速查詢)
-    try {
-      await this.store.put(recordKey, savedata);
-    } catch (err) {
-      console.error('[Store Error] Failed to update current record:', err);
-    }
+  /**
+   * 若 sensor: 落後於 _m: 內最新一筆，從歷史修復當前快照（處理過去先寫歷史、逾時未寫 sensor 的情況）
+   */
+  private async repairCurrentIfBehind(): Promise<SensorDataRecord | null> {
+    if (!this.store) return null;
+
+    const recordKey = `sensor:${this.deviceId}`;
+    const current = await this.store.get(recordKey);
+    const currentTs = current?.lastchange ?? 0;
+
+    const [latest] = await this.getHistory(1, 0);
+    if (!latest) return null;
+
+    const latestTs = latest.lastchange ?? 0;
+    if (latestTs <= currentTs) return null;
+
+    console.warn(
+      `[SwitchBot] ${this.name} sensor: 落後於歷史 (${currentTs} < ${latestTs})，自動修復`
+    );
+    await this.store.put(recordKey, latest);
+    this.data = latest;
+    this.lastchange = latest.lastchange;
+    return latest;
   }
 
   public async syncToThingSpeak(data: SensorDataRecord) {
@@ -271,17 +296,23 @@ export class SwitchBot {
 
     if (this.store) {
       const recordKey = `sensor:${this.deviceId}`;
-      const record = await this.store.get(recordKey);
-      
+      let record = await this.store.get(recordKey);
+
+      const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
+
       if (record) {
         this.data = record;
         this.lastchange = record.lastchange;
-
-        const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
-        
-        // 改用整體的 lastchange (最後同步時間) 來判斷是否過期
-        // 這樣即使數值沒變，只要剛同步過，就不會重複 fetch
         isStale = checkStale(this.lastchange);
+      }
+
+      // 僅在當前快照可能過期時才比對歷史（避免每次讀取都掃 _m:）
+      if (isStale) {
+        const repaired = await this.repairCurrentIfBehind();
+        if (repaired) {
+          record = repaired;
+          isStale = checkStale(this.lastchange);
+        }
       }
     } else if (this.data) {
        const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
