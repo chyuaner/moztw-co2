@@ -10,7 +10,16 @@ mainApp.use('*', async (c, next) => {
     c.set('store', new KVStore(c.env.SENSOR_KV));
   }
 
-  c.set("ImageResponse", ImageResponse);
+  c.set('ImageResponse', ImageResponse);
+
+  // 將耗時的 KV 作業延後到回應送出後（例如 _m: 整包合併），避免 webhook 逾時
+  const executionCtx = c.executionCtx;
+  if (executionCtx?.waitUntil) {
+    c.set('defer', (promise: Promise<unknown>) => {
+      executionCtx.waitUntil(promise);
+    });
+  }
+
   await next();
 });
 

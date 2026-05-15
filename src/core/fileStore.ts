@@ -75,17 +75,20 @@ export class FileStore<T = any> implements IStore<T> {
 
     if (options?.skipMeta) return;
 
-    // 自動維護 Metadata 索引 (現在直接包含原始資料以利圖表功能)
+    await this.scopedMergeMeta(scope, key, value);
+  }
+
+  async scopedMergeMeta(scope: string, key: string, value: T): Promise<void> {
     const metaKey = `_m:${scope}`;
     const metaData = await this.get(metaKey);
-    
+
     let updatedMeta: Record<string, T>;
     if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       updatedMeta = metaData as Record<string, T>;
     } else {
       updatedMeta = {};
     }
-    
+
     updatedMeta[key] = value;
     await this.put(metaKey, updatedMeta as any);
   }

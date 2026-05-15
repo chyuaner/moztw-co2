@@ -13,6 +13,8 @@ import { ImageResponse } from '@cf-wasm/og';
 export type Variables = {
   store: IStore;
   ImageResponse: any;
+  /** Cloudflare Workers：將 Promise 延後至回應送出後執行 (waitUntil) */
+  defer?: (promise: Promise<unknown>) => void;
 };
 
 export type Bindings = {
@@ -35,10 +37,13 @@ export const getSensors = (c: any) => {
   
   try {
     const configs: SensorConfig[] = JSON.parse(configStr);
+    const defer = c.get('defer') as Variables['defer'];
     return configs.map((cfg) => {
       // 預留未來擴充其他廠牌 IoT 設備的彈性
       // if (cfg.vendor === 'other') return new OtherBot(cfg);
-      return new SwitchBot(cfg, store);
+      const sensor = new SwitchBot(cfg, store);
+      if (defer) sensor.setDefer(defer);
+      return sensor;
     });
   } catch (error) {
     console.error('[Config Error] Failed to parse SENSORS_CONFIG:', error);

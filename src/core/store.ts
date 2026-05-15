@@ -34,6 +34,10 @@ export interface IStore<T = any> {
     cursor?: string;
   }>;
   /**
+   * 將單筆資料合併進 _m: 索引（讀取整包、寫回；適合 waitUntil 背景執行）
+   */
+  scopedMergeMeta(scope: string, key: string, value: T): Promise<void>;
+  /**
    * 取得特定範圍內的所有資料 (用於圖表等需要大量資料的場景，僅需一次 GET)
    */
   scopedData(scope: string): Promise<Record<string, T> | null>;
@@ -72,26 +76,31 @@ export class KVStore<T = any> implements IStore<T> {
     const fullKey = `${this.SCOPE_PREFIX}${scope}:${key}`;
     await this.kv.put(fullKey, JSON.stringify(value));
 
-    // 如果指定跳過，就不更新 Metadata 索引 (用於匯出/匯入等純資料搬移場景)
     if (options?.skipMeta) return;
 
-    // 自動維護 Metadata 索引 (現在直接包含原始資料以利圖表功能)
+    await this.scopedMergeMeta(scope, key, value);
+  }
+
+  async scopedMergeMeta(scope: string, key: string, value: T): Promise<void> {
+    if (!this.kv) return;
+
     try {
       const metaKey = `${this.META_PREFIX}${scope}`;
       const metaData = await this.get(metaKey);
-      
+
       let updatedMeta: Record<string, T>;
       if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
         updatedMeta = metaData as Record<string, T>;
       } else {
         updatedMeta = {};
       }
-      
+
       updatedMeta[key] = value;
       await this.put(metaKey, updatedMeta as any);
-      console.log(`[Store] Updated metadata index (with data) for ${scope}, new size: ${Object.keys(updatedMeta).length}`);
+      console.log(`[Store] Updated metadata index for ${scope}, new size: ${Object.keys(updatedMeta).length}`);
     } catch (err) {
       console.error(`[Store Error] Failed to update metadata index for ${scope}:`, err);
+      throw err;
     }
   }
 
@@ -248,17 +257,20 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
 
     if (options?.skipMeta) return;
 
-    // 自動維護 Metadata 索引 (現在直接包含原始資料以利圖表功能)
+    await this.scopedMergeMeta(scope, key, value);
+  }
+
+  async scopedMergeMeta(scope: string, key: string, value: T): Promise<void> {
     const metaKey = `${this.META_PREFIX}${scope}`;
     const metaData = await this.get(metaKey);
-    
+
     let updatedMeta: Record<string, T>;
     if (metaData && typeof metaData === 'object' && !Array.isArray(metaData)) {
       updatedMeta = metaData as Record<string, T>;
     } else {
       updatedMeta = {};
     }
-    
+
     updatedMeta[key] = value;
     await this.put(metaKey, updatedMeta as any);
   }

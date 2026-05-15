@@ -9,6 +9,13 @@ export interface SensorConfig {
   thingspeak?: Record<string, string>;
 }
 
+/** Cloudflare Workers：用 executionCtx.waitUntil 延後執行背景任務 */
+export type DeferTask = (promise: Promise<unknown>) => void;
+
+export interface SaveToStoreOptions {
+  defer?: DeferTask;
+}
+
 export interface SensorDataRecord {
   temperature?: number;
   temperature_lastchange?: number;
@@ -43,6 +50,9 @@ export class SwitchBot {
   // 避免同時間併發觸發多次 fetch
   private fetchPromise: Promise<SensorDataRecord> | null = null;
 
+  /** 由 getSensors(c) 注入；Cloudflare 上為 waitUntil，本機則為 undefined */
+  private defer?: DeferTask;
+
   constructor(config: SensorConfig, store?: import('./store.js').IStore<SensorDataRecord>) {
     this.id = config.id;
     this.name = config.name;
@@ -52,6 +62,16 @@ export class SwitchBot {
     this.only_webhook = config.only_webhook || false;
     this.thingspeak = config.thingspeak;
     this.store = store;
+  }
+
+  public setDefer(defer: DeferTask): void {
+    this.defer = defer;
+  }
+
+  private resolveSaveOptions(options?: SaveToStoreOptions): SaveToStoreOptions | undefined {
+    const defer = options?.defer ?? this.defer;
+    if (!defer) return options;
+    return { ...options, defer };
   }
 
   /**
@@ -138,7 +158,7 @@ export class SwitchBot {
     };
   }
 
-  private async saveToStore(savedata: SensorDataRecord) {
+  private async saveToStore(savedata: SensorDataRecord, options?: SaveToStoreOptions) {
     // 提早更新記憶體快取，確保實例狀態即時同步
     this.data = savedata;
     this.lastchange = savedata.lastchange;
@@ -160,17 +180,32 @@ export class SwitchBot {
       throw err;
     }
 
-    // 2. 寫入歷史紀錄 (Raw Ingestion)
-    try {
-      const timestampMs = savedata.lastchange ? savedata.lastchange * 1000 : Date.now();
-      const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
-      const scope = `deviceId:${this.deviceId}:${dateStr}`;
-      const timestampStr = `${timestampMs}`;
+    // 2. 寫入歷史：先寫單筆 _s:（快），_m: 整包合併改背景或同步執行
+    const timestampMs = savedata.lastchange ? savedata.lastchange * 1000 : Date.now();
+    const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
+    const scope = `deviceId:${this.deviceId}:${dateStr}`;
+    const timestampStr = `${timestampMs}`;
 
-      await this.store.scopedPut(scope, timestampStr, savedata);
-      console.log(`[Store] ${this.name} 歷史紀錄寫入成功, lastchange=${savedata.lastchange}`);
+    try {
+      await this.store.scopedPut(scope, timestampStr, savedata, { skipMeta: true });
+      console.log(`[Store] ${this.name} 歷史單筆寫入成功 (_s:), lastchange=${savedata.lastchange}`);
     } catch (err) {
-      console.error(`[Store Error] ${this.name} 歷史紀錄寫入失敗:`, err);
+      console.error(`[Store Error] ${this.name} 歷史單筆寫入失敗:`, err);
+    }
+
+    const mergeMeta = async () => {
+      try {
+        await this.store!.scopedMergeMeta(scope, timestampStr, savedata);
+        console.log(`[Store] ${this.name} _m 索引更新成功, lastchange=${savedata.lastchange}`);
+      } catch (err) {
+        console.error(`[Store Error] ${this.name} _m 索引更新失敗:`, err);
+      }
+    };
+
+    if (options?.defer) {
+      options.defer(mergeMeta());
+    } else {
+      await mergeMeta();
     }
   }
 
@@ -224,7 +259,7 @@ export class SwitchBot {
   /**
    * 提供給 webhook 接收資料使用的 function
    */
-  public async updateFromWebhook(context: any) {
+  public async updateFromWebhook(context: any, options?: SaveToStoreOptions) {
     const newData: Partial<SensorDataRecord> = {};
     if (context.temperature !== undefined) newData.temperature = context.temperature;
     if (context.humidity !== undefined) newData.humidity = context.humidity;
@@ -237,7 +272,7 @@ export class SwitchBot {
     newData.isWebhook = true;
 
     const consolidated = await this.consolidate(newData);
-    await this.saveToStore(consolidated);
+    await this.saveToStore(consolidated, this.resolveSaveOptions(options));
 
     // 同步到 ThingSpeak
     await this.syncToThingSpeak(consolidated);
@@ -247,7 +282,7 @@ export class SwitchBot {
    * 手動重新抓取資料，並更新內部變數
    * 外部若需要強制更新，可以直接呼叫此方法
    */
-  public async fetch(): Promise<SensorDataRecord> {
+  public async fetch(options?: SaveToStoreOptions): Promise<SensorDataRecord> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -279,7 +314,7 @@ export class SwitchBot {
 
     newData.isWebhook = false;
     const consolidated = await this.consolidate(newData);
-    await this.saveToStore(consolidated);
+    await this.saveToStore(consolidated, this.resolveSaveOptions(options));
 
     // 同步到 ThingSpeak
     await this.syncToThingSpeak(consolidated);
@@ -290,7 +325,7 @@ export class SwitchBot {
   /**
    * 確保資料已載入，優先從已儲存的資訊輸出，若沒資料或過期才自動 fetch
    */
-  private async ensureData(): Promise<SensorDataRecord> {
+  private async ensureData(options?: SaveToStoreOptions): Promise<SensorDataRecord> {
     const now = Math.floor(Date.now() / 1000);
     let isStale = true;
 
@@ -329,7 +364,8 @@ export class SwitchBot {
     }
 
     if (!this.fetchPromise) {
-      this.fetchPromise = this.fetch().finally(() => {
+      const saveOpts = this.resolveSaveOptions(options);
+      this.fetchPromise = this.fetch(saveOpts).finally(() => {
         this.fetchPromise = null;
       });
     }
@@ -343,8 +379,8 @@ export class SwitchBot {
     }
   }
 
-  public async getAll(): Promise<SensorDataRecord> {
-    return await this.ensureData();
+  public async getAll(options?: SaveToStoreOptions): Promise<SensorDataRecord> {
+    return await this.ensureData(options);
   }
 
   // ---------------------------------------------------------------------------
