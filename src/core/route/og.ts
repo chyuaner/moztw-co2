@@ -88,88 +88,94 @@ const ogImageResponse = {
   }
 };
 
-const getOgLocationRoute = createRoute({
-  method: 'get',
-  path: '/locations/{id}',
-  summary: '取得位置的溫濕度圖表圖片',
-  request: { params: ogParams },
-  responses: ogImageResponse
-});
+// 採用「內聯 (Inline) 宣告」寫法，將定義與邏輯合併
+api.openapi(
+  createRoute({
+    method: 'get',
+    path: '/locations/{id}',
+    summary: '取得位置的溫濕度圖表圖片',
+    request: { params: ogParams },
+    responses: ogImageResponse
+  }),
+  (c) => renderSensorChartResponse(c, 'temperature_humidity')
+);
 
-api.openapi(getOgLocationRoute, (c) => renderSensorChartResponse(c, 'temperature_humidity'));
+api.openapi(
+  createRoute({
+    method: 'get',
+    path: '/locations/{id}/temperature',
+    summary: '取得位置的溫度圖表圖片',
+    request: { params: ogParams },
+    responses: ogImageResponse
+  }),
+  (c) => renderSensorChartResponse(c, 'temperature')
+);
 
-const getOgTemperatureRoute = createRoute({
-  method: 'get',
-  path: '/locations/{id}/temperature',
-  summary: '取得位置的溫度圖表圖片',
-  request: { params: ogParams },
-  responses: ogImageResponse
-});
+api.openapi(
+  createRoute({
+    method: 'get',
+    path: '/locations/{id}/humidity',
+    summary: '取得位置的濕度圖表圖片',
+    request: { params: ogParams },
+    responses: ogImageResponse
+  }),
+  (c) => renderSensorChartResponse(c, 'humidity')
+);
 
-api.openapi(getOgTemperatureRoute, (c) => renderSensorChartResponse(c, 'temperature'));
+api.openapi(
+  createRoute({
+    method: 'get',
+    path: '/locations/{id}/temperature_humidity',
+    summary: '取得位置的溫濕度圖表圖片',
+    request: { params: ogParams },
+    responses: ogImageResponse
+  }),
+  (c) => renderSensorChartResponse(c, 'temperature_humidity')
+);
 
-const getOgHumidityRoute = createRoute({
-  method: 'get',
-  path: '/locations/{id}/humidity',
-  summary: '取得位置的濕度圖表圖片',
-  request: { params: ogParams },
-  responses: ogImageResponse
-});
+api.openapi(
+  createRoute({
+    method: 'get',
+    path: '/locations/{id}/co2',
+    summary: '取得位置的 CO2 圖表圖片',
+    request: { params: ogParams },
+    responses: ogImageResponse
+  }),
+  (c) => renderSensorChartResponse(c, 'co2')
+);
 
-api.openapi(getOgHumidityRoute, (c) => renderSensorChartResponse(c, 'humidity'));
+api.openapi(
+  createRoute({
+    method: 'get',
+    path: '/chart-test',
+    summary: '圖表測試圖片',
+    responses: ogImageResponse
+  }),
+  async (c) => {
+    const ImageResponse = c.get('ImageResponse');
+    if (!ImageResponse) {
+      return c.text('ImageResponse not found in context', 500);
+    }
 
-const getOgTempHumRoute = createRoute({
-  method: 'get',
-  path: '/locations/{id}/temperature_humidity',
-  summary: '取得位置的溫濕度圖表圖片',
-  request: { params: ogParams },
-  responses: ogImageResponse
-});
-
-api.openapi(getOgTempHumRoute, (c) => renderSensorChartResponse(c, 'temperature_humidity'));
-
-const getOgCo2Route = createRoute({
-  method: 'get',
-  path: '/locations/{id}/co2',
-  summary: '取得位置的 CO2 圖表圖片',
-  request: { params: ogParams },
-  responses: ogImageResponse
-});
-
-api.openapi(getOgCo2Route, (c) => renderSensorChartResponse(c, 'co2'));
-
-
-const getChartTestRoute = createRoute({
-  method: 'get',
-  path: '/chart-test',
-  summary: '圖表測試圖片',
-  responses: ogImageResponse
-});
-
-api.openapi(getChartTestRoute, async (c) => {
-  const ImageResponse = c.get('ImageResponse');
-  if (!ImageResponse) {
-    return c.text('ImageResponse not found in context', 500);
+    try {
+      return new ImageResponse(ChartOg(), 
+        {
+          width: 1200,
+          height: 630,
+          fonts: [{
+            name: 'sans-serif',
+            data: getFontData(),
+            style: 'normal',
+            weight: 400,
+          }],
+        });
+    } catch (error) {
+      throw error;
+    }
   }
+);
 
-  try {
-    return new ImageResponse(ChartOg(), 
-      {
-        width: 1200,
-        height: 630,
-        fonts: [{
-          name: 'sans-serif',
-          data: getFontData(),
-          style: 'normal',
-          weight: 400,
-        }],
-      });
-  } catch (error) {
-    throw error;
-  }
-});
-
-// 萬能匹配 (OpenAPI 不適合註冊 catch-all，這段直接用 Hono 原生)
+// 萬能匹配 (Catch-all)
 api.all('*', (c) => renderOgError(c, 404, '找不到此圖片路徑'));
 
 export default api;
