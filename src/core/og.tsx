@@ -126,29 +126,27 @@ const ErrorElement = ({
     title: String,
     style?: CSSProperties
 }) => {
-
-    const main = <div
-        style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            height: "100%",
-            padding: "3em",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            ...style,
-        }}
-        >
-        <div style={{display: 'flex', width: '100%', borderBottom: '1px solid black', alignItems: "center", justifyContent: "center", paddingBottom: '15px', gap: '20'}}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="icon icon-tabler icons-tabler-outline icon-tabler-file-unknown"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M12 17v.01" /><path d="M12 14a1.5 1.5 0 1 0 -1.14 -2.474" /></svg>
-            <h1>{statusCode} Error</h1>
+    return (
+        <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center', 
+            padding: '80px', 
+            backgroundColor: '#f9fafb', 
+            width: '1200px', 
+            height: '630px', 
+            fontFamily: 'sans-serif',
+            ...style 
+        }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '30px', marginBottom: '40px' }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M12 17v.01" /><path d="M12 14a1.5 1.5 0 1 0 -1.14 -2.474" /></svg>
+                <h1 style={{ display: 'flex', fontSize: '80px', color: '#111827', margin: 0 }}>{statusCode} Error</h1>
+            </div>
+            <div style={{ display: 'flex', fontSize: '50px', color: '#4b5563', lineHeight: '1.4' }}>
+                {title}
+            </div>
         </div>
-        <div style={{display: 'flex', padding: '1em'}}>
-            <p>{title}</p>
-        </div>
-        </div>;
-
-  return main;
+    );
 };
 
 // Basechart: 共用的圖表版面框架與資料處理邏輯
