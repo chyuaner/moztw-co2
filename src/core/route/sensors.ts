@@ -1,12 +1,11 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { getSensors, Bindings, Variables } from '../app.js';
-import { SwitchBot } from '../switchBot.js';
+import { Bindings, Variables, getSensors, SensorIdSchema } from '../appHelper.js';
 import { formatSpaceApi } from '../format.js';
 
 export const SpaceApiValueSchema = z.object({
   value: z.number().openapi({ example: 25.5 }),
   unit: z.string().openapi({ example: '°C' }),
-  location: z.string().openapi({ example: 'inside' }),
+  location: SensorIdSchema,
   name: z.string().openapi({ example: '室內' }),
   lastchange: z.number().openapi({ description: '最後更新時間戳記' })
 }).openapi('SpaceApiValue');
@@ -69,7 +68,7 @@ api.openapi(
     description: '回傳相容於 SpaceAPI Sensors 格式的單一感測器資訊。',
     request: {
       params: z.object({
-        id: z.string().openapi({ description: '感測器設備 ID', example: 'inside' })
+        id: SensorIdSchema
       })
     },
     responses: {
@@ -91,7 +90,7 @@ api.openapi(
     try {
       const id = c.req.valid('param').id;
       const sensors = getSensors(c);
-      const sensor = sensors.find((s: SwitchBot) => s.id === id);
+      const sensor = sensors.find((s) => s.id === id);
       if (!sensor) return c.json({ error: 'Sensor not found' }, 404);
       const data = await sensor.getAll();
       const formatted = formatSpaceApi(sensor.id, sensor.name, data);

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getSensors } from '../app';
+import { getSensors } from '../appHelper.js';
 import { Dashboard } from './html';
 import { ASSETS } from '../../../gen/assets.gen';
 

@@ -1,6 +1,5 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { getSensors, generalOgOptions, getFontData, Bindings, Variables } from '../app.js';
-import { SwitchBot } from '../switchBot.js';
+import { Bindings, Variables, getSensors, getFontData, generalOgOptions, SensorIdSchema } from '../appHelper.js';
 import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ErrorElement } from '../og.js';
 
 const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
@@ -38,7 +37,7 @@ const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity
   try {
     const id = c.req.valid('param').id;
     const sensors = getSensors(c);
-    const sensor = sensors.find((s: SwitchBot) => s.id === id);
+    const sensor = sensors.find((s) => s.id === id);
     if (!sensor) {
       return renderOgError(c, 404, `找不到感測器裝置 (${id})`);
     }
@@ -69,8 +68,9 @@ const renderSensorChartResponse = async (c: any, type: 'temperature' | 'humidity
   }
 };
 
+// 使用共用的 SensorIdSchema 作為參數
 const ogParams = z.object({
-  id: z.string().openapi({ description: '感測器設備 ID', example: 'sensor-1' })
+  id: SensorIdSchema
 });
 
 const ogImageResponse = {
@@ -88,7 +88,7 @@ const ogImageResponse = {
   }
 };
 
-// 採用「內聯 (Inline) 宣告」寫法，將定義與邏輯合併
+// 採用內聯 (Inline) 寫法
 api.openapi(
   createRoute({
     method: 'get',
@@ -175,7 +175,6 @@ api.openapi(
   }
 );
 
-// 萬能匹配 (Catch-all)
 api.all('*', (c) => renderOgError(c, 404, '找不到此圖片路徑'));
 
 export default api;

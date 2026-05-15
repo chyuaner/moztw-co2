@@ -5,23 +5,9 @@ import sensorsApi from './route/sensors.js';
 import ogApi from './route/og.js';
 import { app as fe } from './frontend/route.js';
 import { webhookCallback } from 'grammy';
-import { createBot } from './route/bot.js'; // 注意：使用 .js 結尾以符合 ESM 標準
-import { SwitchBot, SensorConfig } from './switchBot.js';
-import { IStore } from './store.js';
-import { ASSETS, BUILD_INFO } from '../../gen/assets.gen.js';
-
-export type Variables = {
-  store: IStore;
-  ImageResponse: any;
-  /** Cloudflare Workers：將 Promise 延後至回應送出後執行 (waitUntil) */
-  defer?: (promise: Promise<unknown>) => void;
-};
-
-export type Bindings = {
-  TELEGRAM_BOT_TOKEN: string;
-  SENSORS_CONFIG: string; // JSON 字串格式
-  SENSOR_KV?: any;
-};
+import { createBot } from './route/bot.js'; 
+import { Bindings, Variables, getSensors } from './appHelper.js';
+import { BUILD_INFO } from '../../gen/assets.gen.js';
 
 export const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 
@@ -35,58 +21,12 @@ app.doc('/openapi.json', {
   },
 });
 
-/* =============================================================================
-Helper 區
-============================================================================= */
-
-// 取得感測器實例列表的輔助函式
-export const getSensors = (c: any) => {
-  const bindings = env<Bindings>(c);
-  const configStr = bindings.SENSORS_CONFIG || '[]';
-  const store = c.get('store');
-  
-  try {
-    const configs: SensorConfig[] = JSON.parse(configStr);
-    const defer = c.get('defer') as Variables['defer'];
-    return configs.map((cfg) => {
-      const sensor = new SwitchBot(cfg, store);
-      if (defer) sensor.setDefer(defer);
-      return sensor;
-    });
-  } catch (error) {
-    console.error('[Config Error] Failed to parse SENSORS_CONFIG:', error);
-    return [];
-  }
-};
-
-// 取得字型資料的輔助函式
-export const getFontData = () => {
-  const binary = atob(ASSETS.font_ttf);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer;
-};
-
-// 通用的 OG 圖片設定
-export const generalOgOptions = {
-  width: 1200,
-  height: 630,
-  fonts: [{
-    name: 'sans-serif',
-    data: getFontData(),
-    style: 'normal',
-    weight: 400,
-  }],
-};
-
 /* -----------------------------------------------------------------------------
 主要 Router 掛載區
 ----------------------------------------------------------------------------- */
 app.route('/locations', locationsApi);
-app.route('/og', ogApi);
 app.route('/sensors', sensorsApi);
+app.route('/og', ogApi);
 
 /* =============================================================================
 前端區 (已經移到 ./frontend/route.ts)
@@ -108,20 +48,17 @@ app.post('/switch-bot/:token', async (c) => {
     
     if (body.eventType === 'changeReport' && body.context && body.context.deviceMac) {
       const mac = body.context.deviceMac;
-      
-      const targetSensor = sensors.find((s: SwitchBot) => {
+      const targetSensor = sensors.find((s) => {
         const configuredMac = s.deviceId.replace(/:/g, '').toUpperCase();
         return configuredMac === mac.toUpperCase();
       });
 
       if (targetSensor) {
-        // 安全檢查：驗證 URL 中的 token 是否與該感測器配置的 token 吻合
         if (!targetSensor.checkToken(tokenFromPath)) {
           console.warn(`[Webhook] Unauthorized access attempt for deviceMac: ${mac} with token: ${tokenFromPath}`);
           return c.text('Unauthorized', 401);
         }
 
-        // 維持原有的 updateFromWebhook 呼叫與參數
         await targetSensor.updateFromWebhook(body.context);
         return c.text('OK');
       } else {

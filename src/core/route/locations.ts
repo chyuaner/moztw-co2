@@ -1,5 +1,5 @@
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
-import { getSensors, Bindings, Variables } from '../app.js';
+import { SensorIdSchema, Bindings, Variables, getSensors } from '../appHelper.js';
 import { SwitchBot, SensorDataRecord } from '../switchBot.js';
 
 export const SensorDataSchema = z.object({
@@ -17,7 +17,7 @@ export const SensorDataSchema = z.object({
 }).openapi('SensorData');
 
 export const LocationSchema = SensorDataSchema.extend({
-  id: z.string().openapi({ example: 'inside', description: '感測器設備 ID' }),
+  id: SensorIdSchema,
   name: z.string().openapi({ example: '室內', description: '感測器顯示名稱' }),
 }).openapi('Location');
 
@@ -83,7 +83,7 @@ api.openapi(
     description: '根據感測器 ID 回傳該感測器的即時狀態',
     request: {
       params: z.object({
-        id: z.string().openapi({ description: '感測器設備 ID', example: 'inside' })
+        id: SensorIdSchema
       })
     },
     responses: {
@@ -105,7 +105,7 @@ api.openapi(
     try {
       const id = c.req.valid('param').id;
       const sensors = getSensors(c);
-      const sensor = sensors.find((s: SwitchBot) => s.id === id);
+      const sensor = sensors.find((s) => s.id === id);
       if (!sensor) return c.json({ error: 'Device not found' }, 404);
       const data = await sensor.getAll();
       return c.json({ id: sensor.id, name: sensor.name, ...data });
@@ -125,7 +125,7 @@ api.openapi(
     description: '根據感測器 ID 及時間範圍條件回傳歷史數據',
     request: {
       params: z.object({
-        id: z.string().openapi({ description: '感測器設備 ID', example: 'inside' })
+        id: SensorIdSchema
       }),
       query: HistoryQuerySchema
     },
@@ -149,7 +149,7 @@ api.openapi(
       const id = c.req.valid('param').id;
       const query = c.req.valid('query');
       const sensors = getSensors(c);
-      const sensor = sensors.find((s: SwitchBot) => s.id === id);
+      const sensor = sensors.find((s) => s.id === id);
       if (!sensor) return c.json({ error: 'Device not found' }, 404);
 
       let results: SensorDataRecord[] = [];

@@ -2,7 +2,7 @@ import { Bot, InputFile, InlineKeyboard } from 'grammy';
 import { SwitchBot, SensorConfig } from '../switchBot.js';
 import { IStore } from '../store.js';
 import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg, TemperatureHumidityChartOg } from '../og.js';
-import { generalOgOptions, getFontData } from '../app.js';
+import { generalOgOptions, getFontData } from '../appHelper.js';
 
 export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
   const bot = new Bot(token);
