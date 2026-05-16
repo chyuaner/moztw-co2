@@ -40,12 +40,7 @@ app.get('/openapi.json', (c) => {
       {
         name: '產生即時圖表的 Open Graph .png 圖片',
         description: '動態生成圖片服務，包含感測器數據圖表。',
-      },
-      // 內部人員專用 (Internal) 排在最後
-      {
-        name: '內部人員專用 (Internal)',
-        description: '僅供內部人員使用的 API 端點，包含 Webhook 接收與 Bot 相關功能。',
-      },
+      }
     ]
   });
 
