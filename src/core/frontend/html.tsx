@@ -1,5 +1,6 @@
 import { html } from 'hono/html';
 import type { FC, PropsWithChildren } from 'hono/jsx';
+import { SwaggerUI } from '@hono/swagger-ui';
 
 /* ----------------------------------------------------
 共用圖示區
@@ -165,6 +166,7 @@ export const IndexPage: FC<{}> = (props) => {
       目前前端頁面正在建構中，您可以透過以下 API 端點取得資料：
       </p>
       <ul>
+      <li><a href="/doc"><code>/doc</code></a> - API 互動文件 (Swagger UI)。</li>
       <li><a href="/sensors"><code>/sensors</code></a> - 依據 <a href="https://spaceapi.io/docs">SpaceAPI</a> 規格提供所有感測器的數據。</li>
       <li><a href="/sensors/:id"><code>/sensors/:id</code></a> - 取得特定感測器（SpaceAPI 格式）的數據。</li>
       <li><a href="/locations"><code>/locations</code></a> - 提供所有裝置的原始格式數據。</li>
@@ -218,6 +220,17 @@ export const Dashboard: FC<{ locations: any[] }> = ({ locations }) => {
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-[#fed7aa]"></div> 不佳 1200-2000 ppm</div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-[#fecaca]"></div> 很差 &gt; 2000 ppm</div>
         </div>
+      </div>
+    </Base>
+  );
+};
+
+export const ApiDocPage: FC = () => {
+  const swaggerHtml = SwaggerUI({ url: '/openapi.json' });
+  return (
+    <Base title="API Documentation">
+      <div className="max-w-[1200px] mx-auto bg-white rounded-xl shadow-sm overflow-hidden p-2">
+        <div dangerouslySetInnerHTML={{ __html: swaggerHtml }} />
       </div>
     </Base>
   );

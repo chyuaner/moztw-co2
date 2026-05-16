@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { getSensors } from '../appHelper.js';
-import { Dashboard } from './html';
+import { Dashboard, ApiDocPage } from './html';
 import { ASSETS } from '../../../gen/assets.gen';
 
 export const app = new Hono();
@@ -65,4 +65,8 @@ app.get('/', async (c) => {
     return { id: s.id, name: s.name, ...current };
   }));
   return c.html(Dashboard({ locations }) as any);
+});
+
+app.get('/doc', (c) => {
+  return c.html(ApiDocPage({}) as any);
 });

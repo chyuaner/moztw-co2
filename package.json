@@ -20,6 +20,7 @@
   "dependencies": {
     "@cf-wasm/og": "^0.3.8",
     "@hono/node-server": "^2.0.1",
+    "@hono/swagger-ui": "^0.6.1",
     "@hono/zod-openapi": "^0.18.4",
     "@types/d3-shape": "^3.1.8",
     "@visx/scale": "^3.12.0",
