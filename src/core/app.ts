@@ -38,7 +38,7 @@ app.get('/openapi.json', (c) => {
         description: '提供各感測器的即時與歷史數據，輸出格式為本站專用。',
       },
       {
-        name: '產生即時圖表的 Open Grapht .png 圖片',
+        name: '產生即時圖表的 Open Graph .png 圖片',
         description: '動態生成圖片服務，包含感測器數據圖表。',
       },
       // 內部人員專用 (Internal) 排在最後

@@ -2,7 +2,7 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { Bindings, Variables, getSensors, getFontData, generalOgOptions, SensorIdSchema } from '../appHelper.js';
 import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ErrorElement } from '../og.js';
 
-const BASE_TAG_NAME = '產生即時圖表的 Open Grapht .png 圖片';
+const BASE_TAG_NAME = '產生即時圖表的 Open Graph .png 圖片';
 
 const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 
