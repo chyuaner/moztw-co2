@@ -53,7 +53,7 @@ app.get('/openapi.json', (c) => {
     (bindings.TELEGRAM_BOT_TOKEN && token === bindings.TELEGRAM_BOT_TOKEN) || 
     sensors.some(s => s.checkToken(token));
 
-  // 如果 token 不正確，過濾掉含有「內部人員專用 (Internal)」的 API
+  // 如果 token 不正確，過濾掉含有「內部人員專用 (Internal)」的 API 及 Schema
   if (!isValidToken) {
     for (const path in doc.paths) {
       const methods = doc.paths[path] as Record<string, any>;
@@ -65,6 +65,10 @@ app.get('/openapi.json', (c) => {
       if (Object.keys(methods).length === 0) {
         delete doc.paths[path];
       }
+    }
+
+    if (doc.components?.schemas?.['SwitchBotWebhookPayload']) {
+      delete doc.components.schemas['SwitchBotWebhookPayload'];
     }
   }
 
