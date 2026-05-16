@@ -7,6 +7,7 @@
     "build:assets": "npm run build:client && npm run build:css && tsx scripts/generate-assets.ts",
     "dev": "npm run dev:worker",
     "dev:worker": "npm run build:assets && wrangler dev",
+    "dev:worker-host": "npm run build:assets && wrangler dev --ip 0.0.0.0",
     "dev:node": "npm run build:assets && tsx src/node.ts",
     "dev:tg": "npm run build:assets && tsx src/tg-lp.ts",
     "get": "tsx src/cli.ts",
