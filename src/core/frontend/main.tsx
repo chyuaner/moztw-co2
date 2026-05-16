@@ -179,12 +179,12 @@ const init = () => {
     btn.addEventListener('click', (e) => {
       // Update Active State
       buttons.forEach(b => {
-        b.classList.remove('bg-white', 'text-gray-900', 'shadow', 'font-semibold');
-        b.classList.add('text-gray-500');
+        b.classList.remove('btn-active', 'bg-base-100', 'hover:bg-base-100', 'text-base-content', 'shadow-sm');
+        b.classList.add('bg-transparent', 'text-base-content/60', 'hover:bg-base-200/50');
       });
       const target = e.currentTarget as HTMLElement;
-      target.classList.remove('text-gray-500');
-      target.classList.add('bg-white', 'text-gray-900', 'shadow', 'font-semibold');
+      target.classList.remove('bg-transparent', 'text-base-content/60', 'hover:bg-base-200/50');
+      target.classList.add('btn-active', 'bg-base-100', 'hover:bg-base-100', 'text-base-content', 'shadow-sm');
       
       // Fetch and Update
       const timeframe = target.getAttribute('data-timeframe') || '6h';
