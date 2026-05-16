@@ -26,16 +26,16 @@ export const ErrorSchema = z.object({
 }).openapi('Error');
 
 export const HistoryQuerySchema = z.object({
-  limit: z.string().optional().openapi({ description: '回傳筆數限制', example: '100' }),
-  offset: z.string().optional().openapi({ description: '跳過的筆數', example: '0' }),
-  min_ts: z.string().optional().openapi({ description: '起始時間戳記' }),
-  max_ts: z.string().optional().openapi({ description: '結束時間戳記' }),
-  limit_days: z.string().optional().openapi({ description: '過去幾天內的資料' }),
-  offset_days: z.string().optional().openapi({ description: '往前回溯的天數' }),
-  limit_months: z.string().optional().openapi({ description: '過去幾個月的資料' }),
-  offset_months: z.string().optional().openapi({ description: '往前回溯的月數' }),
-  limit_hours: z.string().optional().openapi({ description: '過去幾小時的資料' }),
-  offset_hours: z.string().optional().openapi({ description: '往前回溯的小時數' })
+  limit: z.string().optional().openapi({ description: '回傳筆數限制', example: '100', param: { description: '回傳筆數限制' } }),
+  offset: z.string().optional().openapi({ description: '跳過的筆數', example: '0', param: { description: '跳過的筆數' } }),
+  min_ts: z.string().optional().openapi({ description: '起始時間戳記', param: { description: '起始時間戳記' } }),
+  max_ts: z.string().optional().openapi({ description: '結束時間戳記', param: { description: '結束時間戳記' } }),
+  limit_days: z.string().optional().openapi({ description: '過去幾天內的資料', param: { description: '過去幾天內的資料' } }),
+  offset_days: z.string().optional().openapi({ description: '往前回溯的天數', param: { description: '往前回溯的天數' } }),
+  limit_months: z.string().optional().openapi({ description: '過去幾個月的資料', param: { description: '過去幾個月的資料' } }),
+  offset_months: z.string().optional().openapi({ description: '往前回溯的月數', param: { description: '往前回溯的月數' } }),
+  limit_hours: z.string().optional().openapi({ description: '過去幾小時的資料', param: { description: '過去幾小時的資料' } }),
+  offset_hours: z.string().optional().openapi({ description: '往前回溯的小時數', param: { description: '往前回溯的小時數' } })
 });
 
 const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();

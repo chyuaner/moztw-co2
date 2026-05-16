@@ -149,6 +149,7 @@ api.openapi(
     method: 'get',
     path: '/chart-test',
     summary: '圖表測試圖片',
+    tags: ['內部人員專用 (Internal)'],
     responses: ogImageResponse
   }),
   async (c) => {

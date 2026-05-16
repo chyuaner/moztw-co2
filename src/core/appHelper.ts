@@ -21,6 +21,7 @@ export type Bindings = {
 // --- 全站通用的 Schema ---
 export const SensorIdSchema = z.enum(['inside', 'balcony', 'corridor']).openapi({
   description: '感測器設備 ID (位置)',
+  param: { description: '感測器設備 ID (位置)' },
   example: 'inside'
 });
 

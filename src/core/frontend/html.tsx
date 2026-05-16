@@ -240,7 +240,7 @@ export const ApiDocPage: FC = () => {
       <script dangerouslySetInnerHTML={{ __html: `
         window.onload = () => {
           window.ui = SwaggerUIBundle({
-            url: '/openapi.json',
+            url: '/openapi.json' + window.location.search,
             dom_id: '#swagger-ui',
             deepLinking: true,
             presets: [
