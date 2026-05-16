@@ -19,6 +19,9 @@ const ASSET_CONFIG = [
   { key: 'font', path: 'src/core/assets/font.ttf', subset: true },
   { key: 'style', path: 'gen/output.css' },
   { key: 'client', path: 'gen/dist/client/client.js' },
+  { key: 'swagger_ui_css', path: 'node_modules/swagger-ui-dist/swagger-ui.css' },
+  { key: 'swagger_ui_bundle', path: 'node_modules/swagger-ui-dist/swagger-ui-bundle.js' },
+  { key: 'swagger_ui_standalone_preset', path: 'node_modules/swagger-ui-dist/swagger-ui-standalone-preset.js' },
 ];
 
 const SOURCE_FILES = [

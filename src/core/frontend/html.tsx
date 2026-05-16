@@ -226,12 +226,28 @@ export const Dashboard: FC<{ locations: any[] }> = ({ locations }) => {
 };
 
 export const ApiDocPage: FC = () => {
-  const swaggerHtml = SwaggerUI({ url: '/openapi.json' });
   return (
     <Base title="API Documentation">
+      <link rel="stylesheet" href="/swagger-ui.css" />
       <div className="max-w-[1200px] mx-auto bg-white rounded-xl shadow-sm overflow-hidden p-2">
-        <div dangerouslySetInnerHTML={{ __html: swaggerHtml }} />
+        <div id="swagger-ui"></div>
       </div>
+      <script src="/swagger-ui-bundle.js"></script>
+      <script src="/swagger-ui-standalone-preset.js"></script>
+      <script dangerouslySetInnerHTML={{ __html: `
+        window.onload = () => {
+          window.ui = SwaggerUIBundle({
+            url: '/openapi.json',
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [
+              SwaggerUIBundle.presets.apis,
+              SwaggerUIStandalonePreset
+            ],
+            layout: "StandaloneLayout",
+          });
+        };
+      ` }} />
     </Base>
   );
 };

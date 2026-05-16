@@ -54,6 +54,21 @@ app.get("/client.js", (c) => {
   return c.body(asset.body, 200, asset.headers);
 });
 
+app.get("/swagger-ui.css", (c) => {
+  const asset = serveBase64(ASSETS.swagger_ui_css_css, "text/css");
+  return c.body(asset.body, 200, asset.headers);
+});
+
+app.get("/swagger-ui-bundle.js", (c) => {
+  const asset = serveBase64(ASSETS.swagger_ui_bundle_js, "application/javascript");
+  return c.body(asset.body, 200, asset.headers);
+});
+
+app.get("/swagger-ui-standalone-preset.js", (c) => {
+  const asset = serveBase64(ASSETS.swagger_ui_standalone_preset_js, "application/javascript");
+  return c.body(asset.body, 200, asset.headers);
+});
+
 
 /* -----------------------------------------------------------------------------
 前端操作介面區
