@@ -229,6 +229,9 @@ export const ApiDocPage: FC = () => {
   return (
     <Base title="API Documentation">
       <link rel="stylesheet" href="/swagger-ui.css" />
+      {/* <style dangerouslySetInnerHTML={{ __html: `
+        .swagger-ui .topbar { display: none !important; }
+      ` }} /> */}
       <div className="max-w-[1200px] mx-auto bg-white rounded-xl shadow-sm overflow-hidden p-2">
         <div id="swagger-ui"></div>
       </div>
@@ -244,7 +247,7 @@ export const ApiDocPage: FC = () => {
               SwaggerUIBundle.presets.apis,
               SwaggerUIStandalonePreset
             ],
-            layout: "StandaloneLayout",
+            layout: "BaseLayout",
           });
         };
       ` }} />
