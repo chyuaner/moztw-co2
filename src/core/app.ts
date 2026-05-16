@@ -1,4 +1,5 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors'
 import { env } from 'hono/adapter';
 import locationsApi from './route/locations.js';
 import sensorsApi from './route/sensors.js';
@@ -11,7 +12,14 @@ import { BUILD_INFO } from '../../gen/assets.gen.js';
 
 export const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 
-// 自動生成 OpenAPI Spec 的路由
+/* -----------------------------------------------------------------------------
+前置處理
+----------------------------------------------------------------------------- */
+app.use('/*', cors());
+
+/* -----------------------------------------------------------------------------
+自動生成 OpenAPI Spec 的路由
+----------------------------------------------------------------------------- */
 app.doc('/openapi.json', {
   openapi: '3.1.0',
   info: {

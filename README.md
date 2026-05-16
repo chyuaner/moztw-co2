@@ -97,6 +97,15 @@ https://api.telegram.org/bot<TG_TOKEN>/setWebhook?url=<YOUR_URL>/bot/<TG_TOKEN>
 https://api.telegram.org/bot<TG_TOKEN>/deleteWebhook
 ```
 
+## API Doc 文件
+本站已經整理成 `/openapi.json` 可供Swagger使用，亦可使用相容OpenAPI的客戶端（如：Insomnia）
+
+要快速啟動 Swagger伺服器的話，可用以下指令
+
+```sh
+docker run -p 9000:8080 -e SWAGGER_JSON_URL=http://localhost:8787/openapi.json docker.swagger.io/swaggerapi/swagger-ui
+```
+
 ## lastchange 判定原則
 
 ### 1. `lastchange` (連線/確認時間)
