@@ -107,6 +107,8 @@ api.openapi(
     summary: '取得感測器的溫濕度圖表圖片',
     tags: [BASE_TAG_NAME],
     request: { params: ogParams },
+    deprecated: true,
+    description: '目前還不確定此Path用途，要介接整合的話建議改用 /og/locations/{id}/temperature_humidity',
     responses: ogImageResponse
   }),
   (c) => renderSensorChartResponse(c, 'temperature_humidity')
