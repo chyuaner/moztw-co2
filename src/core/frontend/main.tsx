@@ -3,6 +3,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { VictoryChart, VictoryLine, VictoryAxis, VictoryGroup, VictoryArea, VictoryContainer } from 'victory';
 import { api } from './api';
+import { CONFIG } from '../chartConfig';
 
 const ChartComponent = ({ hasCo2, history }: { hasCo2: boolean, history: any[] }) => {
   const tempDomain = [10, 40];
@@ -81,7 +82,7 @@ const ChartComponent = ({ hasCo2, history }: { hasCo2: boolean, history: any[] }
         tickFormat={t => Math.round(t * (tempDomain[1]-tempDomain[0]) + tempDomain[0])}
         style={{
           axis: {stroke: 'transparent'},
-          tickLabels: {fontSize: 10, fill: '#ef4444', padding: 5},
+          tickLabels: {fontSize: 10, fill: CONFIG.mainLine_temperature, padding: 5},
           grid: {stroke: '#f3f4f6', strokeDasharray: '4,4'}
         }}
       />
@@ -91,7 +92,7 @@ const ChartComponent = ({ hasCo2, history }: { hasCo2: boolean, history: any[] }
         tickFormat={t => Math.round(t * (humDomain[1]-humDomain[0]) + humDomain[0])}
         style={{
           axis: {stroke: 'transparent'},
-          tickLabels: {fontSize: 10, fill: '#3b82f6', padding: 5}
+          tickLabels: {fontSize: 10, fill: CONFIG.mainLine_humidity, padding: 5}
         }}
       />
 
@@ -101,14 +102,14 @@ const ChartComponent = ({ hasCo2, history }: { hasCo2: boolean, history: any[] }
           tickFormat={t => Math.round(t * co2Domain[1])}
           style={{
             axis: {stroke: 'transparent'},
-            tickLabels: {fontSize: 10, fill: '#8b5cf6', padding: 5}
+            tickLabels: {fontSize: 10, fill: CONFIG.mainLine_co2, padding: 5}
           }}
         />
       )}
 
-      <VictoryLine data={chartDataTemp} style={{data: {stroke: '#ef4444', strokeWidth: 2}}} />
-      <VictoryLine data={chartDataHum} style={{data: {stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '4,4'}}} />
-      {hasCo2 && <VictoryLine data={chartDataCo2} style={{data: {stroke: '#8b5cf6', strokeWidth: 2}}} />}
+      <VictoryLine data={chartDataTemp} style={{data: {stroke: CONFIG.mainLine_temperature, strokeWidth: 2}}} />
+      <VictoryLine data={chartDataHum} style={{data: {stroke: CONFIG.mainLine_humidity, strokeWidth: 2, strokeDasharray: '4,4'}}} />
+      {hasCo2 && <VictoryLine data={chartDataCo2} style={{data: {stroke: CONFIG.mainLine_co2, strokeWidth: 2}}} />}
     </VictoryChart>
   );
 };

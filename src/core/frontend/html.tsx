@@ -1,6 +1,7 @@
 import { html } from 'hono/html';
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { SwaggerUI } from '@hono/swagger-ui';
+import { CONFIG } from '../chartConfig';
 
 /* ----------------------------------------------------
 共用圖示區
@@ -68,7 +69,7 @@ const RoomCard: FC<{ location: any, index: number }> = ({ location, index }) => 
       <div className={`w-full lg:w-[120px] flex flex-row lg:flex-col items-center justify-center p-5 border-b lg:border-b-0 lg:border-r border-gray-200 shrink-0 ${leftBgClass}`}>
         {html(ROOM_ICONS[index % 3])}
         <h2 className="ml-4 lg:ml-0 lg:mt-3 mb-1 text-lg font-bold text-slate-800">{location.name}</h2>
-        {hasCo2 && <div className="text-xs text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded ml-auto lg:ml-0 lg:mt-2 font-semibold">有 CO2 監測</div>}
+        {hasCo2 && <div className="text-xs px-2 py-0.5 rounded ml-auto lg:ml-0 lg:mt-2 font-semibold" style={{ backgroundColor: CONFIG.mainLineArea_co2 || 'rgba(16, 185, 129, 0.1)', color: CONFIG.mainLine_co2 }}>有 CO2 監測</div>}
       </div>
       
       <div className="grow p-2.5 relative min-w-0 flex items-center justify-center min-h-[200px]">
@@ -82,14 +83,14 @@ const RoomCard: FC<{ location: any, index: number }> = ({ location, index }) => 
       
       <div className="w-full lg:w-[180px] border-t lg:border-t-0 lg:border-l border-gray-200 p-5 flex flex-row lg:flex-col justify-center gap-3 shrink-0 bg-neutral-50 z-20">
         <div className="hidden lg:block text-xs text-gray-500 mb-1 text-center font-medium">目前數值 <span className="current-time"></span></div>
-        <div className="rounded-lg p-3 text-center bg-[#ef4444]/10 text-[#ef4444]">
+        <div className="rounded-lg p-3 text-center" style={{ backgroundColor: CONFIG.mainLineArea_temperature || 'rgba(239, 68, 68, 0.1)', color: CONFIG.mainLine_temperature }}>
           <div>
             <span className="val-temp text-2xl font-bold">{location.temperature?.toFixed(1) || '--'}</span>
             <span className="text-xs ml-0.5">°C</span>
           </div>
           <div className="text-xs mt-1 opacity-80">溫度</div>
         </div>
-        <div className="rounded-lg p-3 text-center bg-[#7494da]/10 text-[#7494da]">
+        <div className="rounded-lg p-3 text-center" style={{ backgroundColor: CONFIG.mainLineArea_humidity || 'rgba(116, 148, 218, 0.1)', color: CONFIG.mainLine_humidity }}>
           <div>
             <span className="val-hum text-2xl font-bold">{location.humidity?.toFixed(0) || '--'}</span>
             <span className="text-xs ml-0.5">%</span>
@@ -97,7 +98,7 @@ const RoomCard: FC<{ location: any, index: number }> = ({ location, index }) => 
           <div className="text-xs mt-1 opacity-80">濕度</div>
         </div>
         {hasCo2 && (
-          <div className="rounded-lg p-3 text-center bg-[#10b981]/10 text-[#10b981]">
+          <div className="rounded-lg p-3 text-center" style={{ backgroundColor: CONFIG.mainLineArea_co2 || 'rgba(16, 185, 129, 0.1)', color: CONFIG.mainLine_co2 }}>
             <div>
               <span className="val-co2 text-2xl font-bold">{location.co2 || '--'}</span>
               <span className="text-xs ml-0.5">ppm</span>
@@ -192,9 +193,9 @@ export const Dashboard: FC<{ locations: any[] }> = ({ locations }) => {
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
             <h1 className="m-0 text-2xl flex items-center gap-3">三個房間 環境監測</h1>
             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-1.5"><div className="w-5 h-0.5 bg-[#ef4444]"></div> 溫度 (°C)</div>
-              <div className="flex items-center gap-1.5"><div className="w-5 h-0 border-t-2 border-dashed border-[#7494da]"></div> 濕度 (%)</div>
-              <div className="flex items-center gap-1.5"><div className="w-5 h-0.5 bg-[#10b981]"></div> CO2 (ppm)</div>
+              <div className="flex items-center gap-1.5"><div className="w-5 h-0.5" style={{ backgroundColor: CONFIG.mainLine_temperature }}></div> 溫度 (°C)</div>
+              <div className="flex items-center gap-1.5"><div className="w-5 h-0 border-t-2 border-dashed" style={{ borderColor: CONFIG.mainLine_humidity }}></div> 濕度 (%)</div>
+              <div className="flex items-center gap-1.5"><div className="w-5 h-0.5" style={{ backgroundColor: CONFIG.mainLine_co2 }}></div> CO2 (ppm)</div>
             </div>
           </div>
           <div className="flex gap-2 bg-gray-100 p-1 rounded-lg w-full md:w-auto">
