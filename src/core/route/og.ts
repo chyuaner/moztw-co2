@@ -95,7 +95,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/locations/{id}',
-    summary: '取得位置的溫濕度圖表圖片',
+    summary: '取得感測器的溫濕度圖表圖片',
     tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
@@ -107,7 +107,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/locations/{id}/temperature',
-    summary: '取得位置的溫度圖表圖片',
+    summary: '取得感測器的溫度圖表圖片',
     tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
@@ -119,7 +119,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/locations/{id}/humidity',
-    summary: '取得位置的濕度圖表圖片',
+    summary: '取得感測器的濕度圖表圖片',
     tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
@@ -131,7 +131,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/locations/{id}/temperature_humidity',
-    summary: '取得位置的溫濕度圖表圖片',
+    summary: '取得感測器的溫濕度圖表圖片',
     tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
@@ -143,7 +143,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/locations/{id}/co2',
-    summary: '取得位置的 CO2 圖表圖片',
+    summary: '取得感測器的 CO2 圖表圖片',
     tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse

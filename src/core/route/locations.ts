@@ -47,7 +47,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/',
-    summary: '取得所有位置',
+    summary: '取得所有感測器',
     tags: [BASE_TAG_NAME],
     description: '回傳摩茲工寮內所有感測器的即時狀態，包含溫度、濕度與 CO2。',
     responses: {
@@ -82,7 +82,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/{id}',
-    summary: '取得特定位置的即時數據',
+    summary: '取得特定感測器的即時數據',
     tags: [BASE_TAG_NAME],
     description: '根據感測器 ID 回傳該感測器的即時狀態',
     request: {
@@ -125,7 +125,7 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/{id}/history',
-    summary: '取得特定位置的歷史數據',
+    summary: '取得特定感測器的歷史數據',
     tags: [BASE_TAG_NAME],
     description: '根據感測器 ID 及時間範圍條件回傳歷史數據',
     request: {
