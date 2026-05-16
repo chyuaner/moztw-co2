@@ -2,6 +2,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { SensorIdSchema, Bindings, Variables, getSensors } from '../appHelper.js';
 import { SwitchBot, SensorDataRecord } from '../switchBot.js';
 
+const BASE_TAG_NAME = '取得感測器的溫度、濕度、CO2資料';
+
 export const SensorDataSchema = z.object({
   temperature: z.number().optional().openapi({ example: 25.5, description: '目前攝氏溫度' }),
   temperature_lastchange: z.number().optional().openapi({ description: '溫度最後更新時間' }),
@@ -46,6 +48,7 @@ api.openapi(
     method: 'get',
     path: '/',
     summary: '取得所有位置',
+    tags: [BASE_TAG_NAME],
     description: '回傳摩茲工寮內所有感測器的即時狀態，包含溫度、濕度與 CO2。',
     responses: {
       200: { 
@@ -80,6 +83,7 @@ api.openapi(
     method: 'get',
     path: '/{id}',
     summary: '取得特定位置的即時數據',
+    tags: [BASE_TAG_NAME],
     description: '根據感測器 ID 回傳該感測器的即時狀態',
     request: {
       params: z.object({
@@ -122,6 +126,7 @@ api.openapi(
     method: 'get',
     path: '/{id}/history',
     summary: '取得特定位置的歷史數據',
+    tags: [BASE_TAG_NAME],
     description: '根據感測器 ID 及時間範圍條件回傳歷史數據',
     request: {
       params: z.object({

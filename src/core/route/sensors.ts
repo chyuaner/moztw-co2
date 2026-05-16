@@ -2,6 +2,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { Bindings, Variables, getSensors, SensorIdSchema } from '../appHelper.js';
 import { formatSpaceApi } from '../format.js';
 
+const BASE_TAG_NAME = '與 SpaceAPI 介接用的相容格式';
+
 export const SpaceApiValueSchema = z.object({
   value: z.number().openapi({ example: 25.5 }),
   unit: z.string().openapi({ example: '°C' }),
@@ -27,7 +29,8 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/',
-    summary: '取得所有感測器 (SpaceAPI 相容格式)',
+    summary: '取得所有感測器 (與 SpaceAPI 介接用的相容格式)',
+    tags: [BASE_TAG_NAME],
     description: '回傳相容於 SpaceAPI Sensors 格式的空間資訊，適合對外開放與各平台整合使用。',
     responses: {
       200: { 
@@ -64,7 +67,8 @@ api.openapi(
   createRoute({
     method: 'get',
     path: '/{id}',
-    summary: '取得特定感測器 (SpaceAPI 相容格式)',
+    summary: '取得特定感測器 (與 SpaceAPI 介接用的相容格式)',
+    tags: [BASE_TAG_NAME],
     description: '回傳相容於 SpaceAPI Sensors 格式的單一感測器資訊。',
     request: {
       params: z.object({

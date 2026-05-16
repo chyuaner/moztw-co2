@@ -28,6 +28,25 @@ app.get('/openapi.json', (c) => {
       version: BUILD_INFO.version,
       description: '提供摩茲工寮即時空間感測數據',
     },
+    tags: [
+      {
+        name: '與 SpaceAPI 介接用的相容格式',
+        description: '提供符合 SpaceAPI 規範的感測器數據（包含溫度、濕度、CO2資料）。',
+      },
+      {
+        name: '取得感測器的溫度、濕度、CO2資料',
+        description: '提供各感測器的即時與歷史數據，輸出格式為本站專用。',
+      },
+      {
+        name: '產生即時圖表的 Open Grapht .png 圖片',
+        description: '動態生成圖片服務，包含感測器數據圖表。',
+      },
+      // 內部人員專用 (Internal) 排在最後
+      {
+        name: '內部人員專用 (Internal)',
+        description: '僅供內部人員使用的 API 端點，包含 Webhook 接收與 Bot 相關功能。',
+      },
+    ]
   });
 
   const token = c.req.query('token') || '';

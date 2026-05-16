@@ -2,6 +2,8 @@ import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi';
 import { Bindings, Variables, getSensors, getFontData, generalOgOptions, SensorIdSchema } from '../appHelper.js';
 import { SensorOg, ChartOg, TemperatureChartOg, Co2ChartOg, HumidityChartOg, TemperatureHumidityChartOg, ErrorElement } from '../og.js';
 
+const BASE_TAG_NAME = '產生即時圖表的 Open Grapht .png 圖片';
+
 const api = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
 
 // 輔助函式：產出 OG 錯誤圖片
@@ -94,6 +96,7 @@ api.openapi(
     method: 'get',
     path: '/locations/{id}',
     summary: '取得位置的溫濕度圖表圖片',
+    tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
   }),
@@ -105,6 +108,7 @@ api.openapi(
     method: 'get',
     path: '/locations/{id}/temperature',
     summary: '取得位置的溫度圖表圖片',
+    tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
   }),
@@ -116,6 +120,7 @@ api.openapi(
     method: 'get',
     path: '/locations/{id}/humidity',
     summary: '取得位置的濕度圖表圖片',
+    tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
   }),
@@ -127,6 +132,7 @@ api.openapi(
     method: 'get',
     path: '/locations/{id}/temperature_humidity',
     summary: '取得位置的溫濕度圖表圖片',
+    tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
   }),
@@ -138,6 +144,7 @@ api.openapi(
     method: 'get',
     path: '/locations/{id}/co2',
     summary: '取得位置的 CO2 圖表圖片',
+    tags: [BASE_TAG_NAME],
     request: { params: ogParams },
     responses: ogImageResponse
   }),
