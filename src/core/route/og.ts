@@ -75,6 +75,15 @@ const ogParams = z.object({
   id: SensorIdSchema
 });
 
+// 專為 CO2 圖表設計的參數，因為只有 'inside' 提供 CO2 資料
+const co2OgParams = z.object({
+  id: z.enum(['inside']).openapi({
+    description: '感測器設備 (位置) - 僅限室內空間提供 CO2 資料',
+    param: { description: '感測器設備 (位置) - 僅限室內空間提供 CO2 資料' },
+    example: 'inside',
+  }),
+});
+
 const ogImageResponse = {
   200: {
     content: { 'image/png': { schema: z.string().openapi({ format: 'binary' }) } },
@@ -144,8 +153,8 @@ api.openapi(
     method: 'get',
     path: '/locations/{id}/co2',
     summary: '取得感測器的 CO2 圖表圖片',
-    tags: [BASE_TAG_NAME],
-    request: { params: ogParams },
+    tags: [BASE_TAG_NAME], // 這裡的 BASE_TAG_NAME 應該是 'Open Grapht產生圖表的png圖片'
+    request: { params: co2OgParams }, // 使用專為 CO2 設計的參數
     responses: ogImageResponse
   }),
   (c) => renderSensorChartResponse(c, 'co2')
