@@ -11,7 +11,7 @@
 	// },
 	"build": {
 		"command": "npm run build:assets",
-		"watch_dir": "non-existent-folder"
+		"watch_dir": "README.md"
 	},
 
 
