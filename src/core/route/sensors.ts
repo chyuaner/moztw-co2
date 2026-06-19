@@ -5,18 +5,23 @@ import { formatSpaceApi } from '../format.js';
 const BASE_TAG_NAME = '與 SpaceAPI 介接用的相容格式';
 
 export const SpaceApiValueSchema = z.object({
-  value: z.union([z.number(), z.boolean()]).openapi({ example: 25.5 }),
+  value: z.union([z.number(), z.boolean()]).optional().openapi({ example: 25.5 }),
+  state: z.string().optional().openapi({ example: 'dark' }),
   unit: z.string().optional().openapi({ example: '°C' }),
-  location: SensorIdSchema,
-  name: z.string().openapi({ example: '室內' }),
+  location: z.string().openapi({ example: 'Entrance' }),
+  name: z.string().openapi({ example: 'front_door' }),
+  description: z.string().optional().openapi({ description: '感測器描述', example: 'true means open; false means closed' }),
   lastchange: z.number().openapi({ description: '最後更新時間戳記' })
 }).openapi('SpaceApiValue');
 
 export const SpaceApiSchema = z.object({
-  temperature: z.array(SpaceApiValueSchema).optional(),
-  humidity: z.array(SpaceApiValueSchema).optional(),
-  carbondioxide: z.array(SpaceApiValueSchema).optional(),
-  door_locked: z.array(SpaceApiValueSchema).optional(),
+  sensors: z.object({
+    temperature: z.array(SpaceApiValueSchema).optional(),
+    humidity: z.array(SpaceApiValueSchema).optional(),
+    carbondioxide: z.array(SpaceApiValueSchema).optional(),
+    door_open: z.array(SpaceApiValueSchema).optional(),
+    illuminance: z.array(SpaceApiValueSchema).optional(),
+  })
 }).openapi('SpaceApi');
 
 export const ErrorSchema = z.object({
@@ -47,16 +52,17 @@ api.openapi(
   async (c) => {
     try {
       const sensors = getSensors(c);
-      const result: any = { temperature: [], humidity: [], carbondioxide: [], door_locked: [] };
+      const result: any = { temperature: [], humidity: [], carbondioxide: [], door_open: [], illuminance: [] };
       for (const s of sensors) {
         const data = await s.getAll();
         const formatted = formatSpaceApi(s.id, s.name, data);
         if (formatted.temperature) result.temperature.push(formatted.temperature);
         if (formatted.humidity) result.humidity.push(formatted.humidity);
         if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-        if (formatted.door_locked) result.door_locked.push(formatted.door_locked);
+        if (formatted.door_open) result.door_open.push(formatted.door_open);
+        if (formatted.illuminance) result.illuminance.push(formatted.illuminance);
       }
-      return c.json(result);
+      return c.json({ sensors: result });
     } catch (error) {
       console.error(`[Error] GET /sensors:`, error);
       return c.text('無法抓取空間資訊，請稍後再試。', 500);
@@ -100,12 +106,13 @@ api.openapi(
       if (!sensor) return c.json({ error: 'Sensor not found' }, 404);
       const data = await sensor.getAll();
       const formatted = formatSpaceApi(sensor.id, sensor.name, data);
-      const result: any = { temperature: [], humidity: [], carbondioxide: [], door_locked: [] };
+      const result: any = { temperature: [], humidity: [], carbondioxide: [], door_open: [], illuminance: [] };
       if (formatted.temperature) result.temperature.push(formatted.temperature);
       if (formatted.humidity) result.humidity.push(formatted.humidity);
       if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
-      if (formatted.door_locked) result.door_locked.push(formatted.door_locked);
-      return c.json(result);
+      if (formatted.door_open) result.door_open.push(formatted.door_open);
+      if (formatted.illuminance) result.illuminance.push(formatted.illuminance);
+      return c.json({ sensors: result });
     } catch (error) {
       console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);
       return c.text('無法抓取空間資訊，請稍後再試。', 500);

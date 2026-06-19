@@ -9,7 +9,8 @@ export const formatSpaceApi = (id: string, name: string, data: SensorDataRecord)
     temperature?: any;
     humidity?: any;
     carbondioxide?: any;
-    door_locked?: any;
+    door_open?: any;
+    ambient_light?: any;
   } = {};
 
   if (typeof data.temperature === 'number') {
@@ -43,11 +44,20 @@ export const formatSpaceApi = (id: string, name: string, data: SensorDataRecord)
   }
 
   if (typeof data.isOpen === 'boolean') {
-    result.door_locked = {
-      value: !data.isOpen,
+    result.door_open = {
+      value: data.isOpen,
       location: id,
       name: name,
       lastchange: data.isOpen_lastchange || data.lastchange || now,
+    };
+  }
+
+  if (typeof data.brightness === 'string') {
+    result.illuminance = {
+      state: data.brightness === 'dim' ? 'dark' : (data.brightness === 'bright' ? 'bright' : data.brightness),
+      location: id,
+      name: name,
+      lastchange: data.brightness_lastchange || data.lastchange || now,
     };
   }
 
