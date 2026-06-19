@@ -14,6 +14,18 @@ export const SensorDataSchema = z.object({
   co2: z.number().optional().openapi({ example: 450, description: 'CO2 濃度 (ppm)' }),
   co2_lastchange: z.number().optional().openapi({ description: 'CO2最後更新時間' }),
   co2_iswebhook: z.boolean().optional().openapi({ description: 'CO2資料是否來自 webhook' }),
+  moveDetected: z.boolean().optional().openapi({ description: '是否偵測到移動' }),
+  moveDetected_lastchange: z.number().optional().openapi({ description: '移動偵測最後更新時間' }),
+  moveDetected_iswebhook: z.boolean().optional().openapi({ description: '移動偵測資料是否來自 webhook' }),
+  brightness: z.string().optional().openapi({ description: '亮度狀態 (e.g. bright, dim)' }),
+  brightness_lastchange: z.number().optional().openapi({ description: '亮度狀態最後更新時間' }),
+  brightness_iswebhook: z.boolean().optional().openapi({ description: '亮度狀態資料是否來自 webhook' }),
+  openState: z.string().optional().openapi({ description: '開合狀態 (open, close, timeOutNotClose)' }),
+  openState_lastchange: z.number().optional().openapi({ description: '開合狀態最後更新時間' }),
+  openState_iswebhook: z.boolean().optional().openapi({ description: '開合狀態資料是否來自 webhook' }),
+  isOpen: z.boolean().optional().openapi({ description: '是否開啟 (由 openState 轉換)' }),
+  isOpen_lastchange: z.number().optional().openapi({ description: '是否開啟最後更新時間' }),
+  isOpen_iswebhook: z.boolean().optional().openapi({ description: '是否開啟資料是否來自 webhook' }),
   lastchange: z.number().optional().openapi({ description: '最後更新時間戳記 (Unix Timestamp)' }),
   isWebhook: z.boolean().optional().openapi({ description: '標記本次數據來源是否為 webhook' }),
 }).openapi('SensorData');
@@ -67,7 +79,7 @@ api.openapi(
       const result: any[] = [];
       for (const s of sensors) {
         const data = await s.getAll();
-        result.push({ id: s.id, name: s.name, ...data });
+        result.push({ id: s.id as any, name: s.name, ...data });
       }
       return c.json(result);
     } catch (error) {
@@ -112,7 +124,7 @@ api.openapi(
       const sensor = sensors.find((s) => s.id === id);
       if (!sensor) return c.json({ error: 'Device not found' }, 404);
       const data = await sensor.getAll();
-      return c.json({ id: sensor.id, name: sensor.name, ...data });
+      return c.json({ id: sensor.id as any, name: sensor.name, ...data });
     } catch (error) {
       console.error(`[Error] GET /devices/${c.req.param('id')}:`, error);
       return c.text('無法抓取裝置資訊，請稍後再試。', 500);

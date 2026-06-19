@@ -5,8 +5,8 @@ import { formatSpaceApi } from '../format.js';
 const BASE_TAG_NAME = '與 SpaceAPI 介接用的相容格式';
 
 export const SpaceApiValueSchema = z.object({
-  value: z.number().openapi({ example: 25.5 }),
-  unit: z.string().openapi({ example: '°C' }),
+  value: z.union([z.number(), z.boolean()]).openapi({ example: 25.5 }),
+  unit: z.string().optional().openapi({ example: '°C' }),
   location: SensorIdSchema,
   name: z.string().openapi({ example: '室內' }),
   lastchange: z.number().openapi({ description: '最後更新時間戳記' })
@@ -16,6 +16,7 @@ export const SpaceApiSchema = z.object({
   temperature: z.array(SpaceApiValueSchema).optional(),
   humidity: z.array(SpaceApiValueSchema).optional(),
   carbondioxide: z.array(SpaceApiValueSchema).optional(),
+  door_locked: z.array(SpaceApiValueSchema).optional(),
 }).openapi('SpaceApi');
 
 export const ErrorSchema = z.object({
@@ -46,13 +47,14 @@ api.openapi(
   async (c) => {
     try {
       const sensors = getSensors(c);
-      const result: any = { temperature: [], humidity: [], carbondioxide: [] };
+      const result: any = { temperature: [], humidity: [], carbondioxide: [], door_locked: [] };
       for (const s of sensors) {
         const data = await s.getAll();
         const formatted = formatSpaceApi(s.id, s.name, data);
         if (formatted.temperature) result.temperature.push(formatted.temperature);
         if (formatted.humidity) result.humidity.push(formatted.humidity);
         if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+        if (formatted.door_locked) result.door_locked.push(formatted.door_locked);
       }
       return c.json(result);
     } catch (error) {
@@ -98,10 +100,11 @@ api.openapi(
       if (!sensor) return c.json({ error: 'Sensor not found' }, 404);
       const data = await sensor.getAll();
       const formatted = formatSpaceApi(sensor.id, sensor.name, data);
-      const result: any = { temperature: [], humidity: [], carbondioxide: [] };
+      const result: any = { temperature: [], humidity: [], carbondioxide: [], door_locked: [] };
       if (formatted.temperature) result.temperature.push(formatted.temperature);
       if (formatted.humidity) result.humidity.push(formatted.humidity);
       if (formatted.carbondioxide) result.carbondioxide.push(formatted.carbondioxide);
+      if (formatted.door_locked) result.door_locked.push(formatted.door_locked);
       return c.json(result);
     } catch (error) {
       console.error(`[Error] GET /sensors/${c.req.param('id')}:`, error);

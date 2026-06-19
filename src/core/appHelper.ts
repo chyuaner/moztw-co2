@@ -19,10 +19,10 @@ export type Bindings = {
 };
 
 // --- 全站通用的 Schema ---
-export const SensorIdSchema = z.enum(['inside', 'balcony', 'corridor']).openapi({
-  description: '感測器設備 (位置)\n\n- `inside`: 室內空間\n- `balcony`: 陽台\n- `corridor`: 走廊',
+export const SensorIdSchema = z.enum(['inside', 'balcony', 'corridor', 'door']).openapi({
+  description: '感測器設備 (位置)\n\n- `inside`: 室內空間\n- `balcony`: 陽台\n- `corridor`: 走廊\n- `door`: 大門',
   param: { 
-    description: '感測器設備 (位置)\n\n- `inside`: 室內空間\n- `balcony`: 陽台\n- `corridor`: 走廊' 
+    description: '感測器設備 (位置)\n\n- `inside`: 室內空間\n- `balcony`: 陽台\n- `corridor`: 走廊\n- `door`: 大門' 
   },
   example: 'inside',
 });

@@ -26,6 +26,18 @@ export interface SensorDataRecord {
   co2?: number;
   co2_lastchange?: number;
   co2_iswebhook?: boolean;
+  moveDetected?: boolean;
+  moveDetected_lastchange?: number;
+  moveDetected_iswebhook?: boolean;
+  brightness?: string;
+  brightness_lastchange?: number;
+  brightness_iswebhook?: boolean;
+  openState?: string;
+  openState_lastchange?: number;
+  openState_iswebhook?: boolean;
+  isOpen?: boolean;
+  isOpen_lastchange?: number;
+  isOpen_iswebhook?: boolean;
   lastchange?: number;
   isWebhook?: boolean; // 新增：標記本次數據來源是否為 webhook
 }
@@ -98,40 +110,52 @@ export class SwitchBot {
     const prev = this.store ? await this.store.get(recordKey) : (this.data || undefined);
 
     // Helper function to consolidate property updates
-    const getConsolidatedProperty = <K extends 'temperature' | 'humidity' | 'co2'>(
+    const getConsolidatedProperty = <
+      K extends 'temperature' | 'humidity' | 'co2' | 'moveDetected' | 'brightness' | 'openState' | 'isOpen'
+    >(
       key: K
-    ) => {
+    ): {
+      value: SensorDataRecord[K];
+      lastchange: number | undefined;
+      iswebhook: boolean | undefined;
+    } => {
       const valueKey = key;
-      const lastchangeKey = `${key}_lastchange` as const;
-      const isWebhookKey = `${key}_iswebhook` as const;
+      const lastchangeKey = `${key}_lastchange` as keyof SensorDataRecord;
+      const isWebhookKey = `${key}_iswebhook` as keyof SensorDataRecord;
 
       const newValue = newData[valueKey];
       const prevValue = prev?.[valueKey];
 
       if (newValue !== undefined) {
-        // 確保數值比較準確 (轉換為 Number 避免字串/數字混合比較問題)
-        const isChanged = prevValue === undefined || Number(newValue) !== Number(prevValue);
+        let isChanged = false;
+        if (prevValue === undefined) {
+          isChanged = true;
+        } else if (typeof newValue === 'number' || typeof prevValue === 'number') {
+          isChanged = Number(newValue) !== Number(prevValue);
+        } else {
+          isChanged = newValue !== prevValue;
+        }
 
         if (isChanged) {
           // Value changed or first record
           return {
-            value: newValue,
+            value: newValue as SensorDataRecord[K],
             lastchange: time, // 使用數據產生的時間戳記
             iswebhook: isWebhook,
           };
         } else {
           // Value unchanged, keep previous metadata
           return {
-            value: newValue,
-            lastchange: prev?.[lastchangeKey] || time,
-            iswebhook: prev?.[isWebhookKey] ?? isWebhook,
+            value: newValue as SensorDataRecord[K],
+            lastchange: (prev?.[lastchangeKey] as number | undefined) || time,
+            iswebhook: (prev?.[isWebhookKey] as boolean | undefined) ?? isWebhook,
           };
         }
       } else {
         return {
-          value: prevValue,
-          lastchange: prev?.[lastchangeKey],
-          iswebhook: prev?.[isWebhookKey],
+          value: prevValue as SensorDataRecord[K],
+          lastchange: prev?.[lastchangeKey] as number | undefined,
+          iswebhook: prev?.[isWebhookKey] as boolean | undefined,
         };
       }
     };
@@ -139,6 +163,10 @@ export class SwitchBot {
     const tempProps = getConsolidatedProperty('temperature');
     const humProps = getConsolidatedProperty('humidity');
     const co2Props = getConsolidatedProperty('co2');
+    const moveDetectedProps = getConsolidatedProperty('moveDetected');
+    const brightnessProps = getConsolidatedProperty('brightness');
+    const openStateProps = getConsolidatedProperty('openState');
+    const isOpenProps = getConsolidatedProperty('isOpen');
 
     return {
       temperature: tempProps.value,
@@ -152,6 +180,22 @@ export class SwitchBot {
       co2: co2Props.value,
       co2_lastchange: co2Props.lastchange,
       co2_iswebhook: co2Props.iswebhook,
+
+      moveDetected: moveDetectedProps.value,
+      moveDetected_lastchange: moveDetectedProps.lastchange,
+      moveDetected_iswebhook: moveDetectedProps.iswebhook,
+
+      brightness: brightnessProps.value,
+      brightness_lastchange: brightnessProps.lastchange,
+      brightness_iswebhook: brightnessProps.iswebhook,
+
+      openState: openStateProps.value,
+      openState_lastchange: openStateProps.lastchange,
+      openState_iswebhook: openStateProps.iswebhook,
+
+      isOpen: isOpenProps.value,
+      isOpen_lastchange: isOpenProps.lastchange,
+      isOpen_iswebhook: isOpenProps.iswebhook,
       
       lastchange: shouldUpdateOverallLastchange ? time : prev?.lastchange,
       isWebhook: isWebhook,
@@ -265,6 +309,12 @@ export class SwitchBot {
     if (context.humidity !== undefined) newData.humidity = context.humidity;
     if (context.CO2 !== undefined) newData.co2 = context.CO2;
     else if (context.co2 !== undefined) newData.co2 = context.co2;
+    if (context.moveDetected !== undefined) newData.moveDetected = context.moveDetected;
+    if (context.brightness !== undefined) newData.brightness = context.brightness;
+    if (context.openState !== undefined) {
+      newData.openState = context.openState;
+      newData.isOpen = (context.openState === 'open' || context.openState === 'timeOutNotClose');
+    }
 
     if (context.timeOfSample) {
       newData.lastchange = Math.floor(context.timeOfSample / 1000);
@@ -300,17 +350,25 @@ export class SwitchBot {
       throw new Error(`Failed to fetch device status: ${response.status} ${response.statusText}`);
     }
 
-    const json = await response.json();
+    const json = (await response.json()) as any;
     
     if (json.statusCode !== 100) {
       throw new Error(`SwitchBot API Error: ${json.message}`);
     }
 
+    const body = json.body || {};
     const newData: Partial<SensorDataRecord> = {
-      temperature: json.body.temperature,
-      humidity: json.body.humidity,
-      co2: json.body.CO2 !== undefined ? json.body.CO2 : json.body.co2,
+      temperature: body.temperature,
+      humidity: body.humidity,
+      co2: body.CO2 !== undefined ? body.CO2 : body.co2,
+      moveDetected: body.moveDetected,
+      brightness: body.brightness,
+      openState: body.openState,
     };
+
+    if (body.openState !== undefined) {
+      newData.isOpen = (body.openState === 'open' || body.openState === 'timeOutNotClose');
+    }
 
     newData.isWebhook = false;
     const consolidated = await this.consolidate(newData);
