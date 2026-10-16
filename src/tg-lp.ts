@@ -1,4 +1,4 @@
-import { createBot } from './core/bot.js';
+import { createBot } from './core/route/bot.js';
 import { SensorConfig } from './core/switchBot.js';
 import { ImageResponse } from "@cf-wasm/og";
 import 'dotenv/config';
