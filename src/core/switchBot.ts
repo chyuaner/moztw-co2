@@ -1,3 +1,5 @@
+import { ISensorDB, createSensorDB } from './db/index.js';
+
 export interface SensorConfig {
   id: string;
   name: string;
@@ -50,7 +52,7 @@ export class SwitchBot {
   private token: string;
   private secret: string;
   private thingspeak?: Record<string, string>;
-  private store?: import('./store.js').IStore<SensorDataRecord>;
+  private db?: ISensorDB;
 
   // 在類別頂部定義過期時間變數，單位秒 (預設 1小時 = 3600秒)
   public staleThresholdSeconds: number = 600;
@@ -65,7 +67,7 @@ export class SwitchBot {
   /** 由 getSensors(c) 注入；Cloudflare 上為 waitUntil，本機則為 undefined */
   private defer?: DeferTask;
 
-  constructor(config: SensorConfig, store?: import('./store.js').IStore<SensorDataRecord>) {
+  constructor(config: SensorConfig, dbOrStore?: ISensorDB | import('./store.js').IStore<SensorDataRecord>) {
     this.id = config.id;
     this.name = config.name;
     this.deviceId = config.deviceId || '';
@@ -73,7 +75,13 @@ export class SwitchBot {
     this.secret = config.secret || '';
     this.only_webhook = config.only_webhook || false;
     this.thingspeak = config.thingspeak;
-    this.store = store;
+    if (dbOrStore) {
+      if ('getCurrent' in dbOrStore && 'save' in dbOrStore) {
+        this.db = dbOrStore as ISensorDB;
+      } else {
+        this.db = createSensorDB(dbOrStore as any);
+      }
+    }
   }
 
   public setDefer(defer: DeferTask): void {
@@ -105,9 +113,8 @@ export class SwitchBot {
     // 如果是 fetch 且設定了 only_webhook，則不更新整體的 lastchange
     const shouldUpdateOverallLastchange = !(this.only_webhook && !isWebhook);
 
-    const recordKey = `sensor:${this.deviceId}`;
-    // 優先從 store 取得前一次紀錄，若無則回退至記憶體中的 data
-    const prev = this.store ? await this.store.get(recordKey) : (this.data || undefined);
+    // 優先從 db 取得前一次紀錄，若無則回退至記憶體中的 data
+    const prev = this.db ? await this.db.getCurrent(this.deviceId) : (this.data || undefined);
 
     // Helper function to consolidate property updates
     const getConsolidatedProperty = <
@@ -207,75 +214,18 @@ export class SwitchBot {
     this.data = savedata;
     this.lastchange = savedata.lastchange;
 
-    if (!this.store) return;
+    if (!this.db) return;
 
-    const recordKey = `sensor:${this.deviceId}`;
     const isWebhook = savedata.isWebhook || false;
-
     console.log(`[SwitchBot] ${this.name} 執行儲存 (來源: ${isWebhook ? 'Webhook' : 'Fetch'})`);
 
-    // 1. 優先寫入當前狀態（Bot/API 依賴此 key）
-    // scopedPut 會讀寫整包 _m: 索引，隨歷史增長變慢；若放前面，Worker 可能在完成前逾時而永遠跳過此步
     try {
-      await this.store.put(recordKey, savedata);
-      console.log(`[Store] ${this.name} 當前狀態寫入成功: ${recordKey}, lastchange=${savedata.lastchange}`);
+      await this.db.save(this.deviceId, savedata, this.resolveSaveOptions(options));
+      console.log(`[Store] ${this.name} 儲存成功, lastchange=${savedata.lastchange}`);
     } catch (err) {
-      console.error(`[Store Error] ${this.name} 當前狀態寫入失敗:`, err);
+      console.error(`[Store Error] ${this.name} 儲存失敗:`, err);
       throw err;
     }
-
-    // 2. 寫入歷史：先寫單筆 _s:（快），_m: 整包合併改背景或同步執行
-    const timestampMs = savedata.lastchange ? savedata.lastchange * 1000 : Date.now();
-    const dateStr = new Date(timestampMs).toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
-    const scope = `deviceId:${this.deviceId}:${dateStr}`;
-    const timestampStr = `${timestampMs}`;
-
-    try {
-      await this.store.scopedPut(scope, timestampStr, savedata, { skipMeta: true });
-      console.log(`[Store] ${this.name} 歷史單筆寫入成功 (_s:), lastchange=${savedata.lastchange}`);
-    } catch (err) {
-      console.error(`[Store Error] ${this.name} 歷史單筆寫入失敗:`, err);
-    }
-
-    const mergeMeta = async () => {
-      try {
-        await this.store!.scopedMergeMeta(scope, timestampStr, savedata);
-        console.log(`[Store] ${this.name} _m 索引更新成功, lastchange=${savedata.lastchange}`);
-      } catch (err) {
-        console.error(`[Store Error] ${this.name} _m 索引更新失敗:`, err);
-      }
-    };
-
-    if (options?.defer) {
-      options.defer(mergeMeta());
-    } else {
-      await mergeMeta();
-    }
-  }
-
-  /**
-   * 若 sensor: 落後於 _m: 內最新一筆，從歷史修復當前快照（處理過去先寫歷史、逾時未寫 sensor 的情況）
-   */
-  private async repairCurrentIfBehind(): Promise<SensorDataRecord | null> {
-    if (!this.store) return null;
-
-    const recordKey = `sensor:${this.deviceId}`;
-    const current = await this.store.get(recordKey);
-    const currentTs = current?.lastchange ?? 0;
-
-    const [latest] = await this.getHistory(1, 0);
-    if (!latest) return null;
-
-    const latestTs = latest.lastchange ?? 0;
-    if (latestTs <= currentTs) return null;
-
-    console.warn(
-      `[SwitchBot] ${this.name} sensor: 落後於歷史 (${currentTs} < ${latestTs})，自動修復`
-    );
-    await this.store.put(recordKey, latest);
-    this.data = latest;
-    this.lastchange = latest.lastchange;
-    return latest;
   }
 
   public async syncToThingSpeak(data: SensorDataRecord) {
@@ -387,9 +337,8 @@ export class SwitchBot {
     const now = Math.floor(Date.now() / 1000);
     let isStale = true;
 
-    if (this.store) {
-      const recordKey = `sensor:${this.deviceId}`;
-      let record = await this.store.get(recordKey);
+    if (this.db) {
+      let record = await this.db.getCurrent(this.deviceId);
 
       const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
 
@@ -397,15 +346,6 @@ export class SwitchBot {
         this.data = record;
         this.lastchange = record.lastchange;
         isStale = checkStale(this.lastchange);
-      }
-
-      // 僅在當前快照可能過期時才比對歷史（避免每次讀取都掃 _m:）
-      if (isStale) {
-        const repaired = await this.repairCurrentIfBehind();
-        if (repaired) {
-          record = repaired;
-          isStale = checkStale(this.lastchange);
-        }
       }
     } else if (this.data) {
        const checkStale = (ts?: number) => !ts || (now - ts > this.staleThresholdSeconds);
@@ -461,112 +401,18 @@ export class SwitchBot {
   // ---------------------------------------------------------------------------
 
   public async getHistory(limit: number, offset: number = 0): Promise<SensorDataRecord[]> {
-    if (!this.store) return [];
-
-    try {
-      // 1. 找出所有已知的月份索引，並由新到舊排序 (YYYYMM 字典序即時間序)
-      const prefix = `_m:deviceId:${this.deviceId}:`;
-      const listResult = await this.store.list({ prefix });
-      const sortedMonthKeys = listResult.keys
-        .map(k => k.name)
-        .sort((a, b) => b.localeCompare(a)); 
-      
-      const results: SensorDataRecord[] = [];
-      let skipped = 0;
-
-      // 2. 逐月讀取，直到達到 limit 筆數即停止，節省 KV GET
-      for (const key of sortedMonthKeys) {
-        const scope = key.replace('_m:', '');
-        const data = await this.store.scopedData(scope);
-        if (!data) continue;
-
-        // 將該月資料按時間由新到舊排序
-        const monthRecords = Object.values(data).sort((a, b) => (b.lastchange || 0) - (a.lastchange || 0));
-
-        for (const record of monthRecords) {
-          // 處理偏移量 (offset)
-          if (skipped < offset) {
-            skipped++;
-            continue;
-          }
-
-          results.push(record);
-
-          // 達到筆數上限，立即回傳
-          if (results.length >= limit) {
-            return results;
-          }
-        }
-      }
-
-      return results;
-    } catch (err) {
-      console.error(`[SwitchBot] getHistory error for ${this.name}:`, err);
-      return [];
-    }
+    if (!this.db) return [];
+    return this.db.getHistory(this.deviceId, { limit, offset });
   }
 
   public async getHistoryAll(): Promise<SensorDataRecord[]> {
-    if (!this.store) return [];
-
-    try {
-      // 1. 找出所有已知的月份索引 (利用 _m: 前綴)
-      const prefix = `_m:deviceId:${this.deviceId}:`;
-      const listResult = await this.store.list({ prefix });
-      
-      const results: SensorDataRecord[] = [];
-      // 2. 對每個月份呼叫一次 scopedData 取得整個月的資料 (有效減少 KV GET 次數)
-      for (const key of listResult.keys) {
-        const scope = key.name.replace('_m:', '');
-        const data = await this.store.scopedData(scope);
-        if (data) {
-          results.push(...Object.values(data));
-        }
-      }
-      
-      // 按時間排序 (由新到舊)
-      return results.sort((a, b) => (b.lastchange || 0) - (a.lastchange || 0));
-    } catch (err) {
-      console.error(`[SwitchBot] getHistoryAll error for ${this.name}:`, err);
-      return [];
-    }
+    if (!this.db) return [];
+    return this.db.getHistory(this.deviceId);
   }
 
   public async getHistoryByTimestamp(min: number, max?: number): Promise<SensorDataRecord[]> {
-    if (!this.store) return [];
-
-    try {
-      // 正規化為秒數，並確保範圍正確
-      const normalize = (ts: number) => (ts > 100000000000 ? Math.floor(ts / 1000) : ts);
-      const start = normalize(min);
-      const end = max !== undefined ? normalize(max) : Math.floor(Date.now() / 1000);
-
-      const realStart = Math.min(start, end);
-      const realEnd = Math.max(start, end);
-
-      // 1. 計算範圍內涵蓋的月份
-      const months = this.getMonthsInRange(realStart, realEnd);
-      
-      const results: SensorDataRecord[] = [];
-      // 2. 只抓取相關月份的資料
-      for (const monthStr of months) {
-        const scope = `deviceId:${this.deviceId}:${monthStr}`;
-        const data = await this.store.scopedData(scope);
-        if (data) {
-          for (const record of Object.values(data)) {
-            const ts = record.lastchange || 0;
-            if (ts >= realStart && ts <= realEnd) {
-              results.push(record);
-            }
-          }
-        }
-      }
-
-      return results.sort((a, b) => (b.lastchange || 0) - (a.lastchange || 0));
-    } catch (err) {
-      console.error(`[SwitchBot] getHistoryByTimestamp error for ${this.name}:`, err);
-      return [];
-    }
+    if (!this.db) return [];
+    return this.db.getHistory(this.deviceId, { minTimestamp: min, maxTimestamp: max });
   }
 
   public async getHistoryByHours(limit_hours: number, offset_hours: number = 0): Promise<SensorDataRecord[]> {
@@ -599,29 +445,4 @@ export class SwitchBot {
       Math.floor(maxDate.getTime() / 1000)
     );
   }
-
-  private getMonthsInRange(start: number, end: number): string[] {
-    const months: string[] = [];
-    let current = new Date(start * 1000);
-    const last = new Date(end * 1000);
-
-    // 調整到月初，避免月份加減時因為日期(如31日)產生的跳越問題
-    current.setDate(1);
-    current.setHours(0, 0, 0, 0);
-
-    while (current <= last) {
-      const yyyymm = current.toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
-      months.push(yyyymm);
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    // 確保最後一個月份有被包含 (雖然 loop 通常已處理，但防呆)
-    const lastYm = last.toISOString().split('T')[0].replace(/-/g, '').substring(0, 6);
-    if (!months.includes(lastYm)) {
-      months.push(lastYm);
-    }
-
-    return months;
-  }
-
 }

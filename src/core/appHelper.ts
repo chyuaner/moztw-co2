@@ -4,9 +4,12 @@ import { SwitchBot, SensorConfig } from './switchBot.js';
 import { IStore } from './store.js';
 import { ASSETS } from '../../gen/assets.gen.js';
 
+import { ISensorDB } from './db/index.js';
+
 // --- 型別定義 ---
 export type Variables = {
-  store: IStore;
+  store?: IStore;
+  db?: ISensorDB;
   ImageResponse: any;
   /** Cloudflare Workers：將 Promise 延後至回應送出後執行 (waitUntil) */
   defer?: (promise: Promise<unknown>) => void;
@@ -33,13 +36,13 @@ export const SensorIdSchema = z.enum(['inside', 'balcony', 'corridor', 'door']).
 export const getSensors = (c: any) => {
   const bindings = env<Bindings>(c);
   const configStr = bindings.SENSORS_CONFIG || '[]';
-  const store = c.get('store');
+  const db = c.get('db') || c.get('store');
   
   try {
     const configs: SensorConfig[] = JSON.parse(configStr);
     const defer = c.get('defer') as Variables['defer'];
     return configs.map((cfg) => {
-      const sensor = new SwitchBot(cfg, store);
+      const sensor = new SwitchBot(cfg, db);
       if (defer) sensor.setDefer(defer);
       return sensor;
     });

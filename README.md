@@ -30,14 +30,57 @@ npm install
 將 `.env.sample` 複製為 `.env` 並填入相關資訊：
 ```bash
 cp .env.sample .env
+# 若使用 Cloudflare Workers 模式 (wrangler dev)，請同時複製一份為 .dev.vars
+cp .env .dev.vars
 ```
 - `TELEGRAM_BOT_TOKEN`: 你的 Telegram Bot Token。
 - `SENSORS_CONFIG`: 所有IoT設備的相關資訊，結構範例請看 `.env.sample` 檔案 （目前支援SwitchBot Meter/Hub 的設備）
 
-### 3. 啟動本地伺服器
-- **Cloudflare Workers 模式**: `npm run dev`
-- **Node.js 伺服器模式**: `npm run dev:node`
-- **Telegram Bot (Long Polling)**: `npm run dev:tg`
+### 3. 啟動本地伺服器測試
+專案支援三種本地測試模式，啟動時皆會自動建置前端與靜態資源（`npm run build:assets`）：
+
+#### 模式 A：Node.js 伺服器模式（推薦，快速離線開發）
+使用本機 Node.js 與 `@hono/node-server` 執行，讀取 `.env`。資料庫會使用本機檔案系統（`.data/` 目錄）模擬，完全獨立於 Cloudflare 遠端環境，適合離線開發、修改 API 或調整前端儀表板：
+```bash
+npm run dev:node
+```
+- **預設網址**：`http://localhost:3000`（可透過環境變數 `PORT` 調整）
+- **儀表板頁面**：開啟瀏覽器造訪 `http://localhost:3000/` 查看即時空間狀態
+- **API 文件 (Swagger UI)**：造訪 `http://localhost:3000/doc` 即可線上測試 API
+
+#### 模式 B：Cloudflare Workers 模式（模擬線上環境）
+使用 `wrangler dev` 模擬 Cloudflare Workers Runtime，讀取 `.dev.vars`：
+```bash
+npm run dev
+# 或若需開放同區域網路的其他設備測試（監聽 0.0.0.0）：
+npm run dev:worker-host
+```
+- **預設網址**：`http://localhost:8787`
+- **儀表板頁面**：`http://localhost:8787/`
+- **API 文件 (Swagger UI)**：`http://localhost:8787/doc`
+
+#### 模式 C：Telegram 機器人本機測試（Long Polling 模式）
+本機測試 Telegram Bot 指令時，無需對外暴露 Webhook 或架設 ngrok，直接由本機主動向 Telegram 伺服器長輪詢：
+```bash
+npm run dev:tg
+```
+> ⚠️ **注意**：在此模式下，必須確保該 Bot Token 目前**沒有綁定 Webhook**（否則 Telegram 會拒絕連線）。若需清除 Webhook，可至瀏覽器造訪：  
+> `https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/deleteWebhook`
+
+### 4. 本地常用測試與指令
+- **終端機快速查看感測器數值**：
+  ```bash
+  npm run get
+  ```
+- **手動重新編譯前端與靜態資源**：
+  ```bash
+  npm run build:assets
+  ```
+- **常用驗證端點**：
+  - `GET /`：前端儀表板 (Dashboard)
+  - `GET /doc`：內建 Swagger UI 互動式文件
+  - `GET /openapi.json`：OpenAPI 3.1 規範
+  - `GET /sensors/data`：感測器詳細數值
 
 
 ## 部署
@@ -98,13 +141,14 @@ https://api.telegram.org/bot<TG_TOKEN>/deleteWebhook
 ```
 
 ## API Doc 文件
-本站已經整理成 `/openapi.json` 可供Swagger使用，亦可使用相容OpenAPI的客戶端（如：Insomnia）
-
-要快速啟動 Swagger伺服器的話，可用以下指令
-
+本站已內建 Swagger UI，並提供標準 `/openapi.json` 規範：
+- **內建 Swagger UI**：伺服器啟動後直接在瀏覽器開啟 `/doc`（例如：`http://localhost:3000/doc` 或 `http://localhost:8787/doc`）即可線上瀏覽與測試。
+- **OpenAPI 規範**：可將 `/openapi.json` 匯入相容 OpenAPI 的客戶端（如：Insomnia、Postman）。
+- **獨立 Docker Swagger UI**：若想使用官方 Swagger 容器預覽，可執行：
 ```sh
 docker run -p 9000:8080 -e SWAGGER_JSON_URL=http://localhost:8787/openapi.json docker.swagger.io/swaggerapi/swagger-ui
 ```
+
 
 ## lastchange 判定原則
 
