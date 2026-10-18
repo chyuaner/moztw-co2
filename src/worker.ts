@@ -1,16 +1,17 @@
 import { app } from './core/app.js';
 import { KVStore } from './core/store.js';
-import { createSensorDB } from './core/db/index.js';
+import { getSensorDB } from './core/db/index.js';
 import { ImageResponse } from "@cf-wasm/og";
 import { Hono } from 'hono';
 
 const mainApp = new Hono();
 
 mainApp.use('*', async (c, next) => {
+  if (!c.get('db')) {
+    c.set('db', getSensorDB(c));
+  }
   if (!c.get('store') && c.env.SENSOR_KV) {
-    const store = new KVStore(c.env.SENSOR_KV);
-    c.set('store', store);
-    c.set('db', createSensorDB(store));
+    c.set('store', new KVStore(c.env.SENSOR_KV));
   }
 
   c.set('ImageResponse', ImageResponse);

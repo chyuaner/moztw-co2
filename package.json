@@ -14,6 +14,7 @@
     "kv:refresh": "tsx src/cf-cli.ts --refresh-meta",
     "kv:export": "tsx src/cf-cli.ts --export",
     "kv:import": "tsx src/cf-cli.ts --import",
+    "db:migrate": "tsx scripts/migrate-to-sqlite.ts",
     "deploy": "npm run build:assets && wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },

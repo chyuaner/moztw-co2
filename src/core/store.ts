@@ -212,22 +212,99 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
     private apiToken: string
   ) {}
 
-  private async fetchKV(path: string, options: RequestInit = {}) {
+  private async fetchKV(path: string, options: RequestInit = {}, maxRetries = 3) {
     const url = `https://api.cloudflare.com/client/v4/accounts/${this.accountId}/storage/kv/namespaces/${this.namespaceId}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${this.apiToken}`,
-        ...options.headers,
-      },
-    });
+    let attempt = 0;
+    while (true) {
+      try {
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            'Authorization': `Bearer ${this.apiToken}`,
+            ...options.headers,
+          },
+        });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Cloudflare API Error: ${response.status} ${errorText}`);
+        if (response.status === 429 || (response.status >= 500 && response.status <= 504)) {
+          if (attempt < maxRetries) {
+            attempt++;
+            const retryAfterHeader = response.headers.get('Retry-After');
+            const delayMs = retryAfterHeader ? parseInt(retryAfterHeader, 10) * 1000 : Math.min(1000 * Math.pow(2, attempt), 8000);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            continue;
+          }
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          const error = new Error(`Cloudflare API Error: ${response.status} ${errorText}`) as any;
+          error.status = response.status;
+          throw error;
+        }
+
+        return response;
+      } catch (err: any) {
+        if (attempt < maxRetries && (err?.status === 429 || !err?.status)) {
+          attempt++;
+          await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt), 8000)));
+          continue;
+        }
+        throw err;
+      }
+    }
+  }
+
+  /**
+   * 批次取得多個 key 的值 (透過 Cloudflare KV bulk/get API)
+   * 內部自動以 100 筆為單位分批請求並合併結果
+   */
+  async getBulk(keys: string[]): Promise<Record<string, T>> {
+    if (keys.length === 0) return {};
+
+    const BATCH_SIZE = 100;
+    const chunks: string[][] = [];
+    for (let i = 0; i < keys.length; i += BATCH_SIZE) {
+      chunks.push(keys.slice(i, i + BATCH_SIZE));
     }
 
-    return response;
+    const mergedResult: Record<string, T> = {};
+
+    await Promise.all(
+      chunks.map(async (chunk) => {
+        const response = await this.fetchKV('/bulk/get', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            keys: chunk,
+            type: 'text',
+          }),
+        });
+
+        const data = (await response.json()) as any;
+        if (!data.success) {
+          throw new Error(`Cloudflare API Bulk Get Error: ${JSON.stringify(data.errors)}`);
+        }
+
+        for (const [key, rawVal] of Object.entries(data.result || {})) {
+          if (rawVal === null || rawVal === undefined) {
+            continue;
+          }
+          if (typeof rawVal === 'string') {
+            try {
+              mergedResult[key] = JSON.parse(rawVal) as T;
+            } catch {
+              mergedResult[key] = rawVal as unknown as T;
+            }
+          } else {
+            mergedResult[key] = rawVal as T;
+          }
+        }
+      })
+    );
+
+    return mergedResult;
   }
 
   async get(key: string): Promise<T | null> {

@@ -6,21 +6,19 @@
 	// "compatibility_flags": [
 	//   "nodejs_compat"
 	// ],
-	// "vars": {
-	//   "MY_VAR": "my-variable"
-	// },
+	"vars": {
+		"SENSOR_STORAGE": "d1"
+	},
 	"build": {
 		"command": "npm run build:assets",
 		"watch_dir": "README.md"
 	},
 
-
-
 	"kv_namespaces": [
 		{
 			"binding": "SENSOR_KV",
 			"id": "b18aeeed328d461c9ef8450dbb8916f4",
-      "remote": true
+			"remote": true
 		}
 	],
 	// "r2_buckets": [
@@ -29,13 +27,13 @@
 	//     "bucket_name": "my-bucket"
 	//   }
 	// ],
-	// "d1_databases": [
-	//   {
-	//     "binding": "MY_DB",
-	//     "database_name": "my-database",
-	//     "database_id": ""
-	//   }
-	// ],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "moztw-co2-db",
+			"database_id": "moztw-co2-db"
+		}
+	],
 	// "ai": {
 	//   "binding": "AI"
 	// },

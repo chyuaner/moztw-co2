@@ -1,7 +1,7 @@
 import { serve } from '@hono/node-server';
 import { app } from './core/app.js';
 import { FileStore } from './core/fileStore.js';
-import { createSensorDB } from './core/db/index.js';
+import { getSensorDB } from './core/db/index.js';
 import { ImageResponse } from "@cf-wasm/og";
 import { Hono } from 'hono';
 import path from 'node:path';
@@ -10,10 +10,11 @@ import 'dotenv/config';
 const mainApp = new Hono();
 
 mainApp.use('*', async (c, next) => {
+  if (!c.get('db')) {
+    c.set('db', getSensorDB(c));
+  }
   if (!c.get('store')) {
-    const store = new FileStore(path.resolve(process.cwd(), '.data/'));
-    c.set('store', store);
-    c.set('db', createSensorDB(store));
+    c.set('store', new FileStore(path.resolve(process.cwd(), '.data/')));
   }
   c.set("ImageResponse", ImageResponse);
   await next();

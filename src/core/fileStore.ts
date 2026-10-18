@@ -44,6 +44,23 @@ export class FileStore<T = any> implements IStore<T> {
     await fs.writeFile(this.filePath, JSON.stringify(parsed, null, 2), 'utf-8');
   }
 
+  async putMany(entries: Record<string, T>): Promise<void> {
+    const keys = Object.keys(entries);
+    if (keys.length === 0) return;
+    await this.ensureDir();
+    let parsed: Record<string, T> = {};
+    try {
+      const data = await fs.readFile(this.filePath, 'utf-8');
+      parsed = JSON.parse(data);
+    } catch (err) {
+      // ignore
+    }
+    for (const k of keys) {
+      parsed[k] = entries[k];
+    }
+    await fs.writeFile(this.filePath, JSON.stringify(parsed, null, 2), 'utf-8');
+  }
+
   async scopedGet(scope: string, key: string): Promise<T | null> {
     const scopePath = path.join(this.folderPath, `${scope}.jsonl`);
     try {
@@ -76,6 +93,14 @@ export class FileStore<T = any> implements IStore<T> {
     if (options?.skipMeta) return;
 
     await this.scopedMergeMeta(scope, key, value);
+  }
+
+  async scopedPutBatch(scope: string, entries: Array<{ key: string; value: T }>): Promise<void> {
+    if (entries.length === 0) return;
+    await this.ensureDir();
+    const scopePath = path.join(this.folderPath, `${scope}.jsonl`);
+    const lines = entries.map(e => JSON.stringify({ k: e.key, v: e.value })).join('\n') + '\n';
+    await fs.appendFile(scopePath, lines, 'utf-8');
   }
 
   async scopedMergeMeta(scope: string, key: string, value: T): Promise<void> {

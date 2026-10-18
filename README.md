@@ -85,26 +85,38 @@ npm run dev:tg
 
 ## 部署
 
-### 1. 設定 Cloudflare KV (儲存感測器最後狀態)
+### 1. 設定資料庫 (Cloudflare D1 或 KV)
 
-本專案使用 Cloudflare KV 來暫存感測器資料與最後更新時間 (`lastchange`)。部署前請先建立對應的 KV Namespace：
+本專案支援 **Cloudflare D1 (分散式 SQLite，推薦)** 與 **Cloudflare KV** 兩種儲存後端，可透過環境變數 `SENSOR_STORAGE` 隨時切換（`d1` 或 `kv`）。
 
+#### 方式 A：使用 Cloudflare D1 (推薦)
+1. 建立 D1 資料庫：
+   ```bash
+   npx wrangler d1 create moztw-co2-db
+   ```
+2. 將終端機回傳的 `database_id` 填入 `wrangler.jsonc` 中的 `d1_databases` 區塊：
+   ```jsonc
+   "d1_databases": [
+     {
+       "binding": "DB",
+       "database_name": "moztw-co2-db",
+       "database_id": "貼上你的 D1 資料庫 ID"
+     }
+   ]
+   ```
+3. 匯入資料表結構與既有資料（可透過本地遷移腳本自動生成）：
+   ```bash
+   # 1. 執行本地遷移（將 .data/ JSON 轉移為 SQLite 並生成 seed_for_d1.sql）
+   npm run db:migrate
+   # 2. 匯入至線上 D1 資料庫
+   npx wrangler d1 execute moztw-co2-db --remote --file=./migrations/seed_for_d1.sql
+   ```
+
+#### 方式 B：使用 Cloudflare KV (保留相容)
+若需切回 KV 模式，建立 KV Namespace 並在 `wrangler.jsonc` 設定 `"vars": { "SENSOR_STORAGE": "kv" }`：
 ```bash
 npx wrangler kv:namespace create "SENSOR_KV"
 ```
-
-執行後，終端機會回傳一段包含 `id` 的 JSON 設定。請開啟 `wrangler.jsonc`，將其中的 `id` 欄位替換為您剛剛獲得的真實 ID：
-
-```jsonc
-  "kv_namespaces": [
-    {
-      "binding": "SENSOR_KV",
-      "id": "把剛剛指令回傳的 id 貼到這裡",
-      "preview_id": "如果有需要本地 dev 測試，可以依終端機提示建立並填入"
-    }
-  ]
-```
-*(注意：程式碼固定使用 `"SENSOR_KV"` 作為 `binding` 名稱，請勿更改此欄位。*
 
 ### 2. 設定重要環境變數 (Secrets)
 

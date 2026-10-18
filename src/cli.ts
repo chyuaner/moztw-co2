@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { SwitchBot } from './core/switchBot.js';
+import { getSensorDB } from './core/db/index.js';
 
 /**
  * CLI 顏色定義
@@ -65,8 +66,9 @@ async function main(): Promise<void> {
       return;
     }
 
+    const db = getSensorDB();
     for (const config of sensorsConfig) {
-      const s = new SwitchBot(config);
+      const s = new SwitchBot(config, db);
       console.log(`\n${colors.yellow}[${s.name}]${colors.reset} 正在抓取...`);
       
       const data = await s.getAll();
