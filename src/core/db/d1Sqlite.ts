@@ -33,47 +33,6 @@ export class D1Client implements ISqlClient {
 }
 
 /**
- * 本地 Node.js SQLite 客戶端實作 (使用 Node 24+ 內建 node:sqlite)
- */
-export class NodeSqliteClient implements ISqlClient {
-  private db: any = null;
-  private dbPath: string;
-
-  constructor(dbPath: string = './.data/moztw.db') {
-    this.dbPath = dbPath;
-  }
-
-  private async getDb(): Promise<any> {
-    if (!this.db) {
-      const fs = await import('node:fs');
-      const path = await import('node:path');
-      const dir = path.dirname(this.dbPath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const { DatabaseSync } = await import('node:sqlite');
-      this.db = new DatabaseSync(this.dbPath);
-    }
-    return this.db;
-  }
-
-  async all<T = any>(query: string, params: any[] = []): Promise<T[]> {
-    const db = await this.getDb();
-    return db.prepare(query).all(...params) as T[];
-  }
-
-  async run(query: string, params: any[] = []): Promise<void> {
-    const db = await this.getDb();
-    db.prepare(query).run(...params);
-  }
-
-  async exec(sql: string): Promise<void> {
-    const db = await this.getDb();
-    db.exec(sql);
-  }
-}
-
-/**
  * 【層級 3】D1 / SQLite 驅動實作 (SQL 體系)
  * 同時適用於 Cloudflare D1 與 本地 SQLite
  */

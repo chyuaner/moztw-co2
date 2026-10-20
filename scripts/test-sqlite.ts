@@ -1,8 +1,8 @@
-import { getSensorDB } from '../src/core/db/index.js';
+import { getNodeSensorDB } from '../src/core/db/node.js';
 
 async function main() {
   console.log('🔍 正在測試 SQLite 查詢功能...');
-  const db = getSensorDB();
+  const db = getNodeSensorDB();
 
   // 1. 測試讀取當前快照
   const indoor = await db.getCurrent('B0E9FEF087CD');

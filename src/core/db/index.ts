@@ -1,8 +1,10 @@
 import { SensorDataRecord } from '../switchBot.js';
 import { IStore, KVStore } from '../store.js';
-import { FileStore } from '../fileStore.js';
 import { KvJsonDriver } from './kvJson.js';
-import { D1SqliteDriver, D1Client, NodeSqliteClient } from './d1Sqlite.js';
+import { D1SqliteDriver, D1Client } from './d1Sqlite.js';
+
+export * from './d1Sqlite.js';
+export * from './kvJson.js';
 
 export interface HistoryQueryOptions {
   minTimestamp?: number;
@@ -41,42 +43,32 @@ export function createSensorDB(store: IStore<SensorDataRecord>): ISensorDB {
 }
 
 /**
- * 智慧切換工廠：根據環境變數與綁定自動選擇最佳驅動
+ * Cloudflare Workers 原生環境工廠：根據環境變數與綁定自動選擇最佳驅動
  *
  * 支援環境變數 SENSOR_STORAGE:
- * - "d1" 或 "sqlite" (預設): 走 D1 / SQLite SQL 驅動
- * - "kv" 或 "file": 走 KV / FileStore 驅動
+ * - "d1" (預設): 走 Cloudflare D1 SQL 驅動
+ * - "kv": 走 Cloudflare KV 驅動
  */
-export function getSensorDB(c?: any): ISensorDB {
-  const envObj = c?.env || (typeof process !== 'undefined' ? process.env : {}) || {};
+export function getSensorDB(c: any): ISensorDB {
+  const envObj = c?.env || {};
   const storageMode = (envObj.SENSOR_STORAGE || '').toLowerCase();
 
-  const isWorker = !!(c?.env && (c.env.DB || c.env.SENSOR_KV));
-
-  if (isWorker) {
-    // Cloudflare Workers 環境
-    if (storageMode === 'kv') {
-      const store = c.get?.('store') || (c.env.SENSOR_KV ? new KVStore(c.env.SENSOR_KV) : null);
-      if (store) return new KvJsonDriver(store);
-    }
-
-    if (c.env?.DB) {
-      return new D1SqliteDriver(new D1Client(c.env.DB));
-    }
-
-    // 若未綁定 D1 則回退至 KV
-    if (c.env?.SENSOR_KV) {
-      const store = c.get?.('store') || new KVStore(c.env.SENSOR_KV);
-      return new KvJsonDriver(store);
-    }
+  // 1. 若指定為 KV 模式
+  if (storageMode === 'kv') {
+    const store = c.get?.('store') || (c.env?.SENSOR_KV ? new KVStore(c.env.SENSOR_KV) : null);
+    if (store) return new KvJsonDriver(store);
   }
 
-  // 本地 Node.js / CLI / Standalone 環境
-  if (storageMode === 'file') {
-    const store = new FileStore('./.data');
+  // 2. 預設使用 Cloudflare D1
+  if (c.env?.DB) {
+    return new D1SqliteDriver(new D1Client(c.env.DB));
+  }
+
+  // 3. 若未綁定 D1 則回退至 KV
+  if (c.env?.SENSOR_KV) {
+    const store = c.get?.('store') || new KVStore(c.env.SENSOR_KV);
     return new KvJsonDriver(store);
   }
 
-  // 本地預設使用 SQLite
-  return new D1SqliteDriver(new NodeSqliteClient('./.data/moztw.db'));
+  throw new Error('[DB] Cloudflare Workers 環境中找不到 DB (D1) 或 SENSOR_KV 綁定。本地 Node 請使用 getNodeSensorDB()');
 }

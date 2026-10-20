@@ -198,14 +198,14 @@ app.openapi(
       return c.json({ error: 'Unauthorized or Bot token not configured' }, 401);
     }
 
-    const store = c.get('store');
+    const db = c.get('db') || c.get('store');
     const configStr = bindings.SENSORS_CONFIG || '[]';
     const sensorsConfigs = JSON.parse(configStr);
     
     const bot = createBot(
       bindings.TELEGRAM_BOT_TOKEN, 
       sensorsConfigs, 
-      store, 
+      db, 
       new URL(c.req.url).origin,
       c.get('ImageResponse')
     );

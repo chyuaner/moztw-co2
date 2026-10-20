@@ -13,7 +13,6 @@
 		"command": "npm run build:assets",
 		"watch_dir": "README.md"
 	},
-
 	"kv_namespaces": [
 		{
 			"binding": "SENSOR_KV",
@@ -31,14 +30,15 @@
 		{
 			"binding": "DB",
 			"database_name": "moztw-co2-db",
-			"database_id": "moztw-co2-db"
+			"database_id": "5840e515-2fdf-40f4-9926-9a8cdc09d7e9",
+			"remote": true
 		}
 	],
 	// "ai": {
 	//   "binding": "AI"
 	// },
 	"observability": {
-	  "enabled": true,
-	  "head_sampling_rate": 1
+		"enabled": true,
+		"head_sampling_rate": 1
 	}
 }

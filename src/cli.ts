@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { SwitchBot } from './core/switchBot.js';
-import { getSensorDB } from './core/db/index.js';
+import { getNodeSensorDB } from './core/db/node.js';
 
 /**
  * CLI 顏色定義

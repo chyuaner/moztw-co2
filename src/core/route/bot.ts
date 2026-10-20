@@ -1,14 +1,15 @@
 import { Bot, InputFile, InlineKeyboard } from 'grammy';
 import { SwitchBot, SensorConfig } from '../switchBot.js';
 import { IStore } from '../store.js';
+import { ISensorDB } from '../db/index.js';
 import { ChartOg, Co2ChartOg, HumidityChartOg, SensorOg, TemperatureChartOg, TemperatureHumidityChartOg } from '../og.js';
 import { generalOgOptions, getFontData } from '../appHelper.js';
 
-export const createBot = (token: string, sensorsConfig: SensorConfig[], store?: IStore, baseUrl?: string, ImageResponse?: any) => {
+export const createBot = (token: string, sensorsConfig: SensorConfig[], storeOrDb?: ISensorDB | IStore, baseUrl?: string, ImageResponse?: any) => {
   const bot = new Bot(token);
 
   // 初始化所有感測器
-  const getSensors = () => sensorsConfig.map(cfg => new SwitchBot(cfg, store));
+  const getSensors = () => sensorsConfig.map(cfg => new SwitchBot(cfg, storeOrDb));
 
   const formatDate = (timestamp?: number) => {
     if (!timestamp) return '';

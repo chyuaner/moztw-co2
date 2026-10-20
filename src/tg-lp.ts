@@ -1,6 +1,6 @@
 import { createBot } from './core/route/bot.js';
 import { SensorConfig } from './core/switchBot.js';
-import { getSensorDB } from './core/db/index.js';
+import { getNodeSensorDB } from './core/db/node.js';
 import { ImageResponse } from "@cf-wasm/og";
 import 'dotenv/config';
 
@@ -18,7 +18,7 @@ try {
   console.error('[Config Error] Failed to parse SENSORS_CONFIG:', e);
 }
 
-const db = getSensorDB();
+const db = getNodeSensorDB();
 const bot = createBot(token, sensorsConfig, db as any, undefined, ImageResponse);
 
 console.log('🚀 正在啟動 Telegram Bot (Long Polling 模式)...');
