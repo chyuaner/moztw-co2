@@ -254,8 +254,7 @@ CREATE TABLE IF NOT EXISTS sensor_current (
       records.sort((a, b) => b.timestamp - a.timestamp);
 
       const sqlLines: string[] = [
-        `-- MoztW CO2 歷史時序資料種子: ${month} (共 ${records.length} 筆)`,
-        'BEGIN TRANSACTION;'
+        `-- MoztW CO2 歷史時序資料種子: ${month} (共 ${records.length} 筆)`
       ];
 
       for (let i = 0; i < records.length; i += batchSize) {
@@ -266,8 +265,6 @@ CREATE TABLE IF NOT EXISTS sensor_current (
           `INSERT OR IGNORE INTO sensor_records (\n  device_id, timestamp, temperature, humidity, co2,\n  move_detected, brightness, open_state, is_open,\n  lastchange, is_webhook, raw_json\n) VALUES\n${valueClauses.join(',\n')};`
         );
       }
-
-      sqlLines.push('COMMIT;');
 
       const monthFilePath = path.join(seedsDir, `seed_records_${month}.sql`);
       const fileContent = sqlLines.join('\n\n') + '\n';

@@ -37,7 +37,7 @@ export class D1Client implements ISqlClient {
  * 同時適用於 Cloudflare D1 與 本地 SQLite
  */
 export class D1SqliteDriver implements ISensorDB {
-  private schemaReady: boolean = false;
+  private static schemaReady: boolean = false;
 
   constructor(private client: ISqlClient) {}
 
@@ -45,37 +45,45 @@ export class D1SqliteDriver implements ISensorDB {
    * 自動初始化資料庫 Schema (確保資料表與索引就緒)
    */
   private async ensureSchema(): Promise<void> {
-    if (this.schemaReady) return;
+    if (D1SqliteDriver.schemaReady) return;
 
-    await this.client.exec(`
-      CREATE TABLE IF NOT EXISTS sensor_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        device_id TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        temperature REAL,
-        humidity REAL,
-        co2 INTEGER,
-        move_detected INTEGER,
-        brightness TEXT,
-        open_state TEXT,
-        is_open INTEGER,
-        lastchange INTEGER,
-        is_webhook INTEGER DEFAULT 0,
-        raw_json TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
+    try {
+      await this.client.run(`
+        CREATE TABLE IF NOT EXISTS sensor_records (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          device_id TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          temperature REAL,
+          humidity REAL,
+          co2 INTEGER,
+          move_detected INTEGER,
+          brightness TEXT,
+          open_state TEXT,
+          is_open INTEGER,
+          lastchange INTEGER,
+          is_webhook INTEGER DEFAULT 0,
+          raw_json TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
 
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_records_device_ts 
-      ON sensor_records (device_id, timestamp DESC);
+      await this.client.run(`
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_records_device_ts 
+        ON sensor_records (device_id, timestamp DESC)
+      `);
 
-      CREATE TABLE IF NOT EXISTS sensor_current (
-        device_id TEXT PRIMARY KEY,
-        data_json TEXT NOT NULL,
-        updated_at INTEGER NOT NULL
-      );
-    `);
+      await this.client.run(`
+        CREATE TABLE IF NOT EXISTS sensor_current (
+          device_id TEXT PRIMARY KEY,
+          data_json TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      `);
+    } catch (err) {
+      console.warn('[D1SqliteDriver] ensureSchema warning:', err);
+    }
 
-    this.schemaReady = true;
+    D1SqliteDriver.schemaReady = true;
   }
 
   async getCurrent(deviceId: string): Promise<SensorDataRecord | null> {
