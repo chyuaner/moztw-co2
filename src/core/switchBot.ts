@@ -260,6 +260,9 @@ export class SwitchBot {
     if (context.CO2 !== undefined) newData.co2 = context.CO2;
     else if (context.co2 !== undefined) newData.co2 = context.co2;
     if (context.moveDetected !== undefined) newData.moveDetected = context.moveDetected;
+    if (context.detectionState !== undefined) {
+      newData.moveDetected = context.detectionState === 'DETECTED';
+    }
     if (context.brightness !== undefined) newData.brightness = context.brightness;
     if (context.openState !== undefined) {
       newData.openState = context.openState;
@@ -267,7 +270,9 @@ export class SwitchBot {
     }
 
     if (context.timeOfSample) {
-      newData.lastchange = Math.floor(context.timeOfSample / 1000);
+      newData.lastchange = context.timeOfSample > 100000000000
+        ? Math.floor(context.timeOfSample / 1000)
+        : context.timeOfSample;
     }
     newData.isWebhook = true;
 

@@ -109,22 +109,24 @@ app.openapi(
         content: {
           'application/json': {
             schema: z.object({
-              eventType: z.string().openapi({ example: 'changeReport' }),
-              eventVersion: z.string().openapi({ example: '1' }),
+              eventType: z.string().optional().openapi({ example: 'changeReport' }),
+              eventVersion: z.union([z.string(), z.number()]).optional().openapi({ example: '1' }),
               context: z.object({
-                deviceMac: z.string().openapi({ example: 'B0E9FEF087CD' }),
-                deviceType: z.string().openapi({ example: 'MeterPro(CO2)' }),
+                deviceMac: z.string().optional().openapi({ example: 'B0E9FEF087CD' }),
+                deviceType: z.string().optional().openapi({ example: 'MeterPro(CO2)' }),
                 temperature: z.number().optional().openapi({ example: 25.3 }),
                 humidity: z.number().optional().openapi({ example: 70 }),
                 CO2: z.number().optional().openapi({ example: 413 }),
-                battery: z.number().optional().openapi({ example: 100 }),
+                co2: z.number().optional().openapi({ example: 413 }),
+                battery: z.union([z.number(), z.string()]).optional().openapi({ example: 100 }),
                 scale: z.string().optional().openapi({ example: 'CELSIUS' }),
                 moveDetected: z.boolean().optional().openapi({ example: false }),
+                detectionState: z.string().optional().openapi({ example: 'DETECTED' }),
                 brightness: z.string().optional().openapi({ example: 'bright' }),
                 openState: z.string().optional().openapi({ example: 'open' }),
                 timeOfSample: z.number().optional().openapi({ example: 1778721288070 })
-              }).openapi({ description: '裝置資料' })
-            }).openapi('SwitchBotWebhookPayload')
+              }).passthrough().optional().openapi({ description: '裝置資料' })
+            }).passthrough().openapi('SwitchBotWebhookPayload')
           }
         }
       }
@@ -145,22 +147,24 @@ app.openapi(
       console.log('[Webhook] Received:', JSON.stringify(body));
       
       if (body.eventType === 'changeReport' && body.context && body.context.deviceMac) {
-        const mac = body.context.deviceMac;
+        const rawMac = body.context.deviceMac;
+        const normalizedMac = String(rawMac).replace(/:/g, '').toUpperCase();
         const targetSensor = sensors.find((s) => {
           const configuredMac = s.deviceId.replace(/:/g, '').toUpperCase();
-          return configuredMac === mac.toUpperCase();
+          return configuredMac === normalizedMac;
         });
 
         if (targetSensor) {
-          if (!targetSensor.checkToken(tokenFromPath)) {
-            console.warn(`[Webhook] Unauthorized access attempt for deviceMac: ${mac} with token: ${tokenFromPath}`);
+          const isAuthorized = targetSensor.checkToken(tokenFromPath) || sensors.some(s => s.checkToken(tokenFromPath));
+          if (!isAuthorized) {
+            console.warn(`[Webhook] Unauthorized access attempt for deviceMac: ${rawMac} with token: ${tokenFromPath}`);
             return c.text('Unauthorized', 401);
           }
 
           await targetSensor.updateFromWebhook(body.context);
           return c.text('OK');
         } else {
-          console.warn(`[Webhook] No sensor configured for deviceMac: ${mac}`);
+          console.warn(`[Webhook] No sensor configured for deviceMac: ${rawMac}`);
           return c.text('Device not configured', 404);
         }
       }

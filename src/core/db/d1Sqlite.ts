@@ -128,7 +128,7 @@ export class D1SqliteDriver implements ISensorDB {
     const rawJson = JSON.stringify(data);
 
     await this.client.run(
-      `INSERT INTO sensor_records (
+      `INSERT OR REPLACE INTO sensor_records (
         device_id, timestamp, temperature, humidity, co2,
         move_detected, brightness, open_state, is_open,
         lastchange, is_webhook, raw_json
