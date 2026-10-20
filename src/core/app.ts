@@ -161,8 +161,24 @@ app.openapi(
             return c.text('Unauthorized', 401);
           }
 
-          await targetSensor.updateFromWebhook(body.context);
-          console.log(`[Webhook] Sensor ${targetSensor.name} (${targetSensor.deviceId}) 成功更新並完成儲存`);
+          const defer = c.get('defer') as Variables['defer'];
+          const updateTask = async () => {
+            try {
+              await targetSensor.updateFromWebhook(body.context);
+              console.log(`[Webhook] Sensor ${targetSensor.name} (${targetSensor.deviceId}) 成功更新並完成儲存`);
+            } catch (err) {
+              console.error(`[Webhook Error] Sensor ${targetSensor.name} (${targetSensor.deviceId}) 背景儲存失敗:`, err);
+            }
+          };
+
+          if (defer) {
+            defer(updateTask());
+          } else if (c.executionCtx?.waitUntil) {
+            c.executionCtx.waitUntil(updateTask());
+          } else {
+            await updateTask();
+          }
+
           return c.text('OK');
         } else {
           console.warn(`[Webhook] No sensor configured for deviceMac: ${rawMac}`);
