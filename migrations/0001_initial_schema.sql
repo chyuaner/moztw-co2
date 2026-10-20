@@ -16,8 +16,8 @@ CREATE TABLE IF NOT EXISTS sensor_records (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 建立依裝置與時間倒序的複合索引
-CREATE INDEX IF NOT EXISTS idx_records_device_ts 
+-- 建立依裝置與時間倒序的唯一複合索引 (防止重試或重複匯入)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_records_device_ts 
 ON sensor_records (device_id, timestamp DESC);
 
 -- 2. 最新狀態快照表 (加速即時 API 與 Telegram Bot 查詢)

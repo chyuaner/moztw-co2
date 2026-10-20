@@ -36,5 +36,13 @@ lerna-debug.log*
 .DS_Store
 .data/
 
+# database & seed data
+migrations/seeds/
+migrations/seed*.sql
+*.sqlite
+*.sqlite3
+*.db
+
 # Cloudflare Workers generated types
 worker-configuration.d.ts
+

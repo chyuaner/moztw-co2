@@ -65,7 +65,7 @@ export class D1SqliteDriver implements ISensorDB {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE INDEX IF NOT EXISTS idx_records_device_ts 
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_records_device_ts 
       ON sensor_records (device_id, timestamp DESC);
 
       CREATE TABLE IF NOT EXISTS sensor_current (
