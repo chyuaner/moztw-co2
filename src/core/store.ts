@@ -287,7 +287,8 @@ export class CloudflareKVStore<T = any> implements IStore<T> {
           throw new Error(`Cloudflare API Bulk Get Error: ${JSON.stringify(data.errors)}`);
         }
 
-        for (const [key, rawVal] of Object.entries(data.result || {})) {
+        const valuesMap = (data.result?.values ?? data.result ?? {}) as Record<string, any>;
+        for (const [key, rawVal] of Object.entries(valuesMap)) {
           if (rawVal === null || rawVal === undefined) {
             continue;
           }

@@ -71,7 +71,7 @@ async function main() {
       for (const [key, val] of Object.entries(parsedData)) {
         if (key.startsWith('sensor:')) {
           const deviceId = key.replace('sensor:', '');
-          const record = val as any;
+          const record = typeof val === 'string' ? JSON.parse(val) : (val as any);
           const updatedAt = record.lastchange || Math.floor(Date.now() / 1000);
           const jsonStr = JSON.stringify(record);
 
@@ -118,7 +118,7 @@ async function main() {
 
       try {
         const entry = JSON.parse(trimmed);
-        const data = entry.v;
+        const data = typeof entry.v === 'string' ? JSON.parse(entry.v) : entry.v;
         const timestampMs = parseInt(entry.k, 10);
         const timestamp = data.lastchange || Math.floor(timestampMs / 1000);
         const rawJson = JSON.stringify(data);

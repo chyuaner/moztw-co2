@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { CloudflareKVStore } from './core/store.js';
 import { FileStore } from './core/fileStore.js';
 
@@ -27,6 +29,7 @@ function showHelp(): void {
   --concurrency, -c <n>   設定並發請求數量 (預設: 10)
   --batch-size, -b <n>    設定每批批量獲取數量 (預設: 100, 最大: 100)
   --prefix <str>          只匯出特定前綴的 Key
+  --clean                 匯出前先清理本地舊的備份檔案，避免重複追加
   --no-bulk               強制禁用 Bulk API，改用多並發單筆模式
 
 環境變數需求:
@@ -65,6 +68,36 @@ async function main(): Promise<void> {
     const prefix = prefixArgIndex !== -1 && args[prefixArgIndex + 1] ? args[prefixArgIndex + 1] : '';
 
     const forceNoBulk = args.includes('--no-bulk');
+    const shouldClean = args.includes('--clean');
+
+    if (shouldClean) {
+      console.log(`${colors.yellow}偵測到 --clean 參數，正在清理本地舊資料...${colors.reset}`);
+      const dataDir = path.resolve('./.data');
+      try {
+        const files = await fs.readdir(dataDir);
+        for (const file of files) {
+          if (file.endsWith('.jsonl') || file === 'data.json') {
+            await fs.unlink(path.join(dataDir, file));
+          }
+        }
+        console.log(`${colors.green}舊資料清理完成。${colors.reset}`);
+      } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+          console.warn(`${colors.yellow}清理舊資料時警示: ${err.message}${colors.reset}`);
+        }
+      }
+    } else {
+      // 若沒有 --clean，但偵測到先前的 data.json 含有錯誤的 "values" 鍵，主動清除該錯誤結構
+      const dataJsonPath = path.resolve('./.data/data.json');
+      try {
+        const raw = await fs.readFile(dataJsonPath, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && 'values' in parsed) {
+          console.log(`${colors.yellow}偵測到先前匯出失敗遺留的異常 data.json，正在自動重置...${colors.reset}`);
+          await fs.unlink(dataJsonPath);
+        }
+      } catch {}
+    }
 
     console.log(`${colors.yellow}正在從 Cloudflare KV 匯出資料到本地...${colors.reset}`);
     console.log(`${colors.cyan}設定: 並發數=${concurrency}, 每批數量=${batchSize}${forceNoBulk ? ' (已禁用 bulk API)' : ''}${prefix ? `, 前綴="${prefix}"` : ''}${colors.reset}`);
@@ -107,12 +140,21 @@ async function main(): Promise<void> {
       const mainDataMap: Record<string, any> = {};
       const scopedBuffers: Map<string, Array<{ key: string; value: any }>> = new Map();
 
+      let isFlushing = false;
       const flushScoped = async () => {
-        for (const [scope, entries] of scopedBuffers.entries()) {
-          if (entries.length > 0) {
-            const toWrite = entries.splice(0, entries.length);
-            await localStore.scopedPutBatch(scope, toWrite);
+        while (isFlushing) {
+          await new Promise((resolve) => setTimeout(resolve, 20));
+        }
+        isFlushing = true;
+        try {
+          for (const [scope, entries] of scopedBuffers.entries()) {
+            if (entries.length > 0) {
+              const toWrite = entries.splice(0, entries.length);
+              await localStore.scopedPutBatch(scope, toWrite);
+            }
           }
+        } finally {
+          isFlushing = false;
         }
       };
 
