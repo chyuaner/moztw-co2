@@ -179,14 +179,14 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], storeOrD
   // 處理圖表選擇的回呼
   bot.callbackQuery(/^graph:(.+):(.+)$/, async (ctx) => {
     const [, sensorId, type] = ctx.match;
-    await ctx.answerCallbackQuery();
+    await ctx.answerCallbackQuery().catch((e) => console.warn('[Bot] answerCallbackQuery failed:', e.message));
     // 移除選單訊息或更新它，這裡選擇直接發送圖表
     await replyWithSensorChart(ctx, sensorId, type as any);
   });
 
   // 處理說明選單的回呼
   bot.callbackQuery('help', async (ctx) => {
-    await ctx.answerCallbackQuery();
+    await ctx.answerCallbackQuery().catch((e) => console.warn('[Bot] answerCallbackQuery failed:', e.message));
     await replyWithHelp(ctx);
   });
 
@@ -344,6 +344,10 @@ export const createBot = (token: string, sensorsConfig: SensorConfig[], storeOrD
   //     await ctx.reply('請使用 /co2 指令');
   //   }
   // });
+
+  bot.catch((err) => {
+    console.error(`[Bot Error] Update ${err.ctx?.update?.update_id}:`, err.error);
+  });
 
   return bot;
 };
