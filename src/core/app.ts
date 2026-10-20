@@ -162,6 +162,7 @@ app.openapi(
           }
 
           await targetSensor.updateFromWebhook(body.context);
+          console.log(`[Webhook] Sensor ${targetSensor.name} (${targetSensor.deviceId}) 成功更新並完成儲存`);
           return c.text('OK');
         } else {
           console.warn(`[Webhook] No sensor configured for deviceMac: ${rawMac}`);

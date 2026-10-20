@@ -214,7 +214,10 @@ export class SwitchBot {
     this.data = savedata;
     this.lastchange = savedata.lastchange;
 
-    if (!this.db) return;
+    if (!this.db) {
+      console.warn(`[SwitchBot] ${this.name} 未綁定資料庫實例，略過持久化儲存`);
+      return;
+    }
 
     const isWebhook = savedata.isWebhook || false;
     console.log(`[SwitchBot] ${this.name} 執行儲存 (來源: ${isWebhook ? 'Webhook' : 'Fetch'})`);
@@ -240,6 +243,7 @@ export class SwitchBot {
         
         try {
           const resp = await fetch(finalUrl);
+          await resp.text().catch(() => {});
           if (!resp.ok) {
             console.error(`[ThingSpeak] ${this.name} 同步 ${key} 失敗: ${resp.status} ${resp.statusText}`);
           }
@@ -279,8 +283,12 @@ export class SwitchBot {
     const consolidated = await this.consolidate(newData);
     await this.saveToStore(consolidated, this.resolveSaveOptions(options));
 
-    // 同步到 ThingSpeak
-    await this.syncToThingSpeak(consolidated);
+    // 同步到 ThingSpeak (若有 defer 則非同步背景執行，避免阻塞 Webhook 回應)
+    if (this.defer) {
+      this.defer(this.syncToThingSpeak(consolidated));
+    } else {
+      await this.syncToThingSpeak(consolidated);
+    }
   }
 
   /**
@@ -330,7 +338,11 @@ export class SwitchBot {
     await this.saveToStore(consolidated, this.resolveSaveOptions(options));
 
     // 同步到 ThingSpeak
-    await this.syncToThingSpeak(consolidated);
+    if (this.defer) {
+      this.defer(this.syncToThingSpeak(consolidated));
+    } else {
+      await this.syncToThingSpeak(consolidated);
+    }
 
     return consolidated;
   }
