@@ -178,5 +178,59 @@ docker run -p 9000:8080 -e SWAGGER_JSON_URL=http://localhost:8787/openapi.json d
 *   如果裝置設定為 `only_webhook: true`，則主動的 `fetch` 行為不會更新整體的 `lastchange`。
 *   該裝置的 `lastchange` 只有在真正收到 Webhook 通知時才會變動，符合您「記錄上次被通知時間」的需求。
 
+## 🛠 感測器欄位擴充與維護手冊 (Developer Guide)
+
+當未來引入新感測器或需要擴充新的監測指標（如：`battery` 電量、`light_level` 光照度、`pm25` 等）時，請依照以下檢查清單依序修改：
+
+### 1. 核心必改（核心業務模型與資料庫映射）
+
+#### 步驟 A：更新感測器資料核心層 (`src/core/switchBot.ts`)
+1. **宣告型別 (`interface SensorDataRecord`)**：
+   新增屬性及其變動追蹤元資料：
+   ```typescript
+   battery?: number;
+   battery_lastchange?: number;
+   battery_iswebhook?: boolean;
+   ```
+2. **屬性合併 (`consolidate`)**：
+   - 將新欄位加入泛型 key 聯集：`K extends 'temperature' | ... | 'battery'`。
+   - 加入取值：`const batteryProps = getConsolidatedProperty('battery');`。
+   - 在回傳物件中組裝屬性（`battery`, `battery_lastchange`, `battery_iswebhook`）。
+3. **資料來源解析**：
+   - `updateFromWebhook()`：從 SwitchBot Webhook context 讀取並賦值。
+   - `fetch()`：從 SwitchBot 官方雲端 API 的 `body` 讀取並賦值。
+
+#### 步驟 B：登記資料庫結構化欄位 (`src/core/db/d1Sqlite.ts`)
+在檔案最前段的 `SENSOR_FIELDS` 陣列新增一筆欄位定義：
+```typescript
+export const SENSOR_FIELDS: readonly SensorFieldDefinition[] = [
+  // ...既有欄位
+  { column: 'battery', property: 'battery', type: 'number' }, // 新增這行
+] as const;
+```
+> 💡 `save()` 的 INSERT 與 `getHistory()` 的 SELECT/物件映射會自動由此陣列動態驅動，**無需手動修改底層 SQL 語句**。
+
+#### 步驟 C：更新資料庫結構 (`migrations/`)
+在 Cloudflare D1 資料庫的 `sensor_records` 表新增欄位：
+```sql
+ALTER TABLE sensor_records ADD COLUMN battery REAL; -- 或 INTEGER / TEXT
+```
+
+---
+
+### 2. 依功能需求選擇性擴充
+
+* **OpenAPI 文件與 Webhook 驗證**：
+  * `src/core/route/locations.ts`：更新 `SensorDataRecordSchema`，讓 Swagger UI 與客戶端 API 包含新欄位。
+  * `src/core/app.ts`：若 Webhook 接收端有驗證 payload，更新 `SwitchBotWebhookPayload`。
+* **Telegram 機器人** (`src/core/route/bot.ts`)：
+  * 若要在 `/co2` 或其他指令中呈現該指標文字，於訊息組裝迴圈中加入顯示條件。
+* **即時圖表與 Open Graph 圖片** (`src/core/og.tsx` & `src/core/route/og.ts`)：
+  * 若要繪製該指標的歷史圖表，新增對應的 Chart 元件與 OG 端點。
+* **SpaceAPI 格式相容** (`src/core/format.ts`)：
+  * 若該指標屬於 SpaceAPI 規範支援項目，在轉換器中加入映射。
+* **前端儀表板** (`src/core/frontend/main.tsx`)：
+  * 若網頁前端 Dashboard 需要展示，加入對應的 Card 卡片與數值渲染。
+
 ## 📄 授權
 [MPL-2.0](LICENSE)

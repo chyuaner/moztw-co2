@@ -2,6 +2,41 @@ import { SensorDataRecord } from '../switchBot.js';
 import { ISensorDB, HistoryQueryOptions, SaveOptions } from './index.js';
 
 /**
+ * 感測器結構化欄位定義 (用於 D1 / SQLite 存取與物件映射)
+ * 後續有新感測器欄位時，僅需在此陣列加入一筆定義即可自動同步 save() 與 getHistory()
+ */
+export interface SensorFieldDefinition {
+  /** 資料庫欄位名稱 (SQL column, snake_case) */
+  column: string;
+  /** SensorDataRecord 中的屬性名稱 (camelCase) */
+  property: keyof SensorDataRecord;
+  /** 型別轉換方式 */
+  type: 'number' | 'string' | 'boolean';
+}
+
+export const SENSOR_FIELDS: readonly SensorFieldDefinition[] = [
+  { column: 'temperature', property: 'temperature', type: 'number' },
+  { column: 'humidity', property: 'humidity', type: 'number' },
+  { column: 'co2', property: 'co2', type: 'number' },
+  { column: 'move_detected', property: 'moveDetected', type: 'boolean' },
+  { column: 'brightness', property: 'brightness', type: 'string' },
+  { column: 'open_state', property: 'openState', type: 'string' },
+  { column: 'is_open', property: 'isOpen', type: 'boolean' },
+  { column: 'lastchange', property: 'lastchange', type: 'number' },
+  { column: 'is_webhook', property: 'isWebhook', type: 'boolean' },
+] as const;
+
+/** 預先拼裝好的查詢欄位字串 (例如 "timestamp, temperature, humidity, ...") */
+const SENSOR_QUERY_COLUMNS = ['timestamp', ...SENSOR_FIELDS.map(f => f.column)].join(', ');
+
+/** 預先拼裝好的 INSERT 欄位與問號佔位符 */
+const SENSOR_INSERT_COLUMNS = ['device_id', 'timestamp', ...SENSOR_FIELDS.map(f => f.column), 'raw_json'].join(', ');
+const SENSOR_INSERT_PLACEHOLDERS = ['device_id', 'timestamp', ...SENSOR_FIELDS.map(() => '?'), 'raw_json']
+  .map(() => '?')
+  .join(', ');
+const SENSOR_INSERT_SQL = `INSERT OR REPLACE INTO sensor_records (${SENSOR_INSERT_COLUMNS}) VALUES (${SENSOR_INSERT_PLACEHOLDERS})`;
+
+/**
  * 通用 SQL 客戶端介面
  * 抹平 Cloudflare D1 與 Node 原生 SQLite 的 API 差異
  */
@@ -123,27 +158,23 @@ export class D1SqliteDriver implements ISensorDB {
     const timestamp = data.lastchange || Math.floor(Date.now() / 1000);
     const rawJson = JSON.stringify(data);
 
-    await this.client.run(
-      `INSERT OR REPLACE INTO sensor_records (
-        device_id, timestamp, temperature, humidity, co2,
-        move_detected, brightness, open_state, is_open,
-        lastchange, is_webhook, raw_json
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        deviceId,
-        timestamp,
-        data.temperature ?? null,
-        data.humidity ?? null,
-        data.co2 ?? null,
-        data.moveDetected !== undefined ? (data.moveDetected ? 1 : 0) : null,
-        data.brightness ?? null,
-        data.openState ?? null,
-        data.isOpen !== undefined ? (data.isOpen ? 1 : 0) : null,
-        data.lastchange ?? timestamp,
-        data.isWebhook ? 1 : 0,
-        rawJson
-      ]
-    );
+    const values: any[] = [
+      deviceId,
+      timestamp,
+      ...SENSOR_FIELDS.map((f) => {
+        const val = (data as any)[f.property];
+        if (val === undefined || val === null) {
+          if (f.column === 'lastchange') return timestamp;
+          if (f.column === 'is_webhook') return 0;
+          return null;
+        }
+        if (f.type === 'boolean') return val ? 1 : 0;
+        return val;
+      }),
+      rawJson,
+    ];
+
+    await this.client.run(SENSOR_INSERT_SQL, values);
   }
 
   async getHistory(deviceId: string, options?: HistoryQueryOptions): Promise<SensorDataRecord[]> {
@@ -153,7 +184,6 @@ export class D1SqliteDriver implements ISensorDB {
 
     let query: string;
     const params: any[] = [deviceId];
-    const fields = `timestamp, temperature, humidity, co2, move_detected, brightness, open_state, is_open, lastchange, is_webhook`;
 
     // 時間範圍查詢
     if (minTimestamp !== undefined || maxTimestamp !== undefined) {
@@ -162,12 +192,12 @@ export class D1SqliteDriver implements ISensorDB {
       const realStart = Math.min(start, end);
       const realEnd = Math.max(start, end);
 
-      query = `SELECT ${fields} FROM sensor_records 
+      query = `SELECT ${SENSOR_QUERY_COLUMNS} FROM sensor_records 
                WHERE device_id = ? AND timestamp >= ? AND timestamp <= ? 
                ORDER BY timestamp DESC`;
       params.push(realStart, realEnd);
     } else {
-      query = `SELECT ${fields} FROM sensor_records 
+      query = `SELECT ${SENSOR_QUERY_COLUMNS} FROM sensor_records 
                WHERE device_id = ? 
                ORDER BY timestamp DESC`;
     }
@@ -181,31 +211,22 @@ export class D1SqliteDriver implements ISensorDB {
       params.push(offset);
     }
 
-    const rows = await this.client.all<{
-      timestamp: number;
-      temperature: number | null;
-      humidity: number | null;
-      co2: number | null;
-      move_detected: number | null;
-      brightness: string | null;
-      open_state: string | null;
-      is_open: number | null;
-      lastchange: number | null;
-      is_webhook: number | null;
-    }>(query, params);
+    const rows = await this.client.all<Record<string, any>>(query, params);
 
     return rows.map((r) => {
       const record: SensorDataRecord = {
         lastchange: r.lastchange ?? r.timestamp,
       };
-      if (r.temperature !== null && r.temperature !== undefined) record.temperature = r.temperature;
-      if (r.humidity !== null && r.humidity !== undefined) record.humidity = r.humidity;
-      if (r.co2 !== null && r.co2 !== undefined) record.co2 = r.co2;
-      if (r.move_detected !== null && r.move_detected !== undefined) record.moveDetected = Boolean(r.move_detected);
-      if (r.brightness !== null && r.brightness !== undefined) record.brightness = r.brightness;
-      if (r.open_state !== null && r.open_state !== undefined) record.openState = r.open_state;
-      if (r.is_open !== null && r.is_open !== undefined) record.isOpen = Boolean(r.is_open);
-      if (r.is_webhook !== null && r.is_webhook !== undefined) record.isWebhook = Boolean(r.is_webhook);
+      for (const field of SENSOR_FIELDS) {
+        const val = r[field.column];
+        if (val !== null && val !== undefined) {
+          if (field.type === 'boolean') {
+            (record as any)[field.property] = Boolean(val);
+          } else {
+            (record as any)[field.property] = val;
+          }
+        }
+      }
       return record;
     });
   }
