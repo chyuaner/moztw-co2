@@ -87,7 +87,6 @@ export class D1SqliteDriver implements ISensorDB {
   }
 
   async getCurrent(deviceId: string): Promise<SensorDataRecord | null> {
-    await this.ensureSchema();
     const rows = await this.client.all<{ data_json: string }>(
       'SELECT data_json FROM sensor_current WHERE device_id = ?',
       [deviceId]
@@ -103,7 +102,6 @@ export class D1SqliteDriver implements ISensorDB {
   }
 
   async saveCurrent(deviceId: string, data: SensorDataRecord): Promise<void> {
-    await this.ensureSchema();
     const now = Math.floor(Date.now() / 1000);
     const dataJson = JSON.stringify(data);
 
@@ -118,8 +116,6 @@ export class D1SqliteDriver implements ISensorDB {
   }
 
   async save(deviceId: string, data: SensorDataRecord, _options?: SaveOptions): Promise<void> {
-    await this.ensureSchema();
-
     // 1. 寫入最新快照表
     await this.saveCurrent(deviceId, data);
 
@@ -151,13 +147,13 @@ export class D1SqliteDriver implements ISensorDB {
   }
 
   async getHistory(deviceId: string, options?: HistoryQueryOptions): Promise<SensorDataRecord[]> {
-    await this.ensureSchema();
     const { minTimestamp, maxTimestamp, limit, offset = 0 } = options || {};
 
     const normalize = (ts: number) => (ts > 100000000000 ? Math.floor(ts / 1000) : ts);
 
     let query: string;
     const params: any[] = [deviceId];
+    const fields = `timestamp, temperature, humidity, co2, move_detected, brightness, open_state, is_open, lastchange, is_webhook`;
 
     // 時間範圍查詢
     if (minTimestamp !== undefined || maxTimestamp !== undefined) {
@@ -166,12 +162,12 @@ export class D1SqliteDriver implements ISensorDB {
       const realStart = Math.min(start, end);
       const realEnd = Math.max(start, end);
 
-      query = `SELECT raw_json FROM sensor_records 
+      query = `SELECT ${fields} FROM sensor_records 
                WHERE device_id = ? AND timestamp >= ? AND timestamp <= ? 
                ORDER BY timestamp DESC`;
       params.push(realStart, realEnd);
     } else {
-      query = `SELECT raw_json FROM sensor_records 
+      query = `SELECT ${fields} FROM sensor_records 
                WHERE device_id = ? 
                ORDER BY timestamp DESC`;
     }
@@ -185,14 +181,32 @@ export class D1SqliteDriver implements ISensorDB {
       params.push(offset);
     }
 
-    const rows = await this.client.all<{ raw_json: string }>(query, params);
+    const rows = await this.client.all<{
+      timestamp: number;
+      temperature: number | null;
+      humidity: number | null;
+      co2: number | null;
+      move_detected: number | null;
+      brightness: string | null;
+      open_state: string | null;
+      is_open: number | null;
+      lastchange: number | null;
+      is_webhook: number | null;
+    }>(query, params);
 
     return rows.map((r) => {
-      try {
-        return JSON.parse(r.raw_json) as SensorDataRecord;
-      } catch {
-        return {} as SensorDataRecord;
-      }
+      const record: SensorDataRecord = {
+        lastchange: r.lastchange ?? r.timestamp,
+      };
+      if (r.temperature !== null && r.temperature !== undefined) record.temperature = r.temperature;
+      if (r.humidity !== null && r.humidity !== undefined) record.humidity = r.humidity;
+      if (r.co2 !== null && r.co2 !== undefined) record.co2 = r.co2;
+      if (r.move_detected !== null && r.move_detected !== undefined) record.moveDetected = Boolean(r.move_detected);
+      if (r.brightness !== null && r.brightness !== undefined) record.brightness = r.brightness;
+      if (r.open_state !== null && r.open_state !== undefined) record.openState = r.open_state;
+      if (r.is_open !== null && r.is_open !== undefined) record.isOpen = Boolean(r.is_open);
+      if (r.is_webhook !== null && r.is_webhook !== undefined) record.isWebhook = Boolean(r.is_webhook);
+      return record;
     });
   }
 }
